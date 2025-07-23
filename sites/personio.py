@@ -5,6 +5,8 @@ import json
 from datetime import datetime, timedelta
 import io
 
+from src.helpers.personio import get_access_token, get_employees, process_employees_data
+
 # Page configuration
 st.set_page_config(
     page_title="Personio API Query Tool",
@@ -25,112 +27,13 @@ if 'column_mapping' not in st.session_state:
 if 'employees_df' not in st.session_state:
     st.session_state.employees_df = None
 
+
 def is_token_valid():
     """Check if the current token is still valid"""
     if not st.session_state.access_token or not st.session_state.token_expires_at:
         return False
     return datetime.now() < st.session_state.token_expires_at
-
-def get_access_token(client_id, client_secret):
-    """Obtain access token from Personio API"""
-    url = "https://api.personio.de/v2/auth/token"
-    headers = {
-        'accept': 'application/json',
-        'content-type': 'application/x-www-form-urlencoded'
-    }
-    data = {
-        'grant_type': 'client_credentials',
-        'client_id': client_id,
-        'client_secret': client_secret
-    }
-    
-    try:
-        response = requests.post(url, headers=headers, data=data)
-        response.raise_for_status()
         
-        token_data = response.json()
-        access_token = token_data.get('access_token')
-        expires_in = token_data.get('expires_in', 3600)  # Default to 1 hour
-        
-        # Calculate expiration time
-        expires_at = datetime.now() + timedelta(seconds=expires_in - 60)  # Subtract 60s for safety
-        
-        return access_token, expires_at, None
-    except requests.exceptions.RequestException as e:
-        return None, None, f"API request failed: {str(e)}"
-    except json.JSONDecodeError:
-        return None, None, "Invalid JSON response from API"
-    except Exception as e:
-        return None, None, f"Unexpected error: {str(e)}"
-
-def get_employees(access_token):
-    """Retrieve employees from Personio API"""
-    url = "https://api.personio.de/v1/company/employees"
-    headers = {
-        'accept': 'application/json',
-        'authorization': f'Bearer {access_token}'
-    }
-    
-    try:
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()
-        
-        employees_data = response.json()
-        return employees_data, None
-    except requests.exceptions.RequestException as e:
-        return None, f"API request failed: {str(e)}"
-    except json.JSONDecodeError:
-        return None, "Invalid JSON response from API"
-    except Exception as e:
-        return None, f"Unexpected error: {str(e)}"
-
-def process_employees_data(employees_data):
-    """Convert employees data to pandas DataFrame"""
-    try:
-        if 'data' not in employees_data:
-            return None, None, "No 'data' field found in API response"
-        
-        employees = employees_data['data']
-        if not employees:
-            return pd.DataFrame(), {}, None
-        
-        # Extract employee information and build column mapping
-        processed_employees = []
-        column_mapping = {}
-        
-        for employee in employees:
-            emp_data = {}
-            
-            # Basic employee info
-            emp_data['ID (id)'] = employee.get('id')
-            column_mapping['id'] = 'ID (id)'
-            
-            # Extract attributes
-            attributes = employee.get('attributes', {})
-            for key, value in attributes.items():
-                if isinstance(value, dict):
-                    # Get label and create column name
-                    label = value.get('label', key)
-                    column_name = f"{label} ({key})"
-                    column_mapping[key] = column_name
-                    
-                    # Get the actual value
-                    if 'value' in value:
-                        emp_data[column_name] = value['value']
-                    else:
-                        emp_data[column_name] = value
-                else:
-                    # Fallback for simple values
-                    column_name = f"{key} ({key})"
-                    column_mapping[key] = column_name
-                    emp_data[column_name] = value
-            
-            processed_employees.append(emp_data)
-        
-        df = pd.DataFrame(processed_employees)
-        return df, column_mapping, None
-    except Exception as e:
-        return None, None, f"Error processing employee data: {str(e)}"
 
 def create_excel_download(df):
     """Create Excel file in memory for download"""
@@ -139,6 +42,7 @@ def create_excel_download(df):
         df.to_excel(writer, index=False, sheet_name='Employees')
     output.seek(0)
     return output.getvalue()
+
 
 # Main app layout
 col1, col2 = st.columns([1, 2])
@@ -205,8 +109,33 @@ with col2:
                     else:
                         st.session_state.employees_df = df
                         st.session_state.column_mapping = column_mapping
-                        st.success(f"✅ Successfully fetched {len(df)} employees!")
+                        # st.success(f"✅ Successfully fetched {len(df)} employees!")
                         st.rerun()
+
+        if st.session_state.employees_df is not None:
+            # Show a summary of the employee data and column mapping - column name, mapping, not null or empty count, null or empty count and data types
+            with st.expander("📋 Column Mapping", expanded=False):
+                st.write("This table shows the mapping of API fields to DataFrame columns:")
+                mapping_df = pd.DataFrame.from_dict(
+                    st.session_state.column_mapping, 
+                    orient='index', 
+                    columns=['DataFrame Column']
+                ).reset_index().rename(columns={'index': 'API Field'})
+                
+                # Count not null and not empty values per column
+                not_null_not_empty = st.session_state.employees_df.apply(
+                    lambda col: col.notnull() & (col.astype(str).str.strip() != ''), axis=0
+                ).sum().values
+                # Count null or empty values per column
+                null_or_empty = st.session_state.employees_df.apply(
+                    lambda col: col.isnull() | (col.astype(str).str.strip() == ''), axis=0
+                ).sum().values
+
+                mapping_df['Not Null & Not Empty Count'] = not_null_not_empty
+                mapping_df['Null or Empty Count'] = null_or_empty
+                st.dataframe(mapping_df, use_container_width=True, hide_index=True)
+
+
     else:
         st.info("Please authenticate first to fetch employee data")
 
@@ -219,7 +148,7 @@ if st.session_state.employees_df is not None:
     with col1:
         st.metric("Total Employees", len(st.session_state.employees_df))
     with col2:
-        st.metric("Total Columns", len(st.session_state.employees_df.columns))
+        st.metric("Total Attributes", len(st.session_state.employees_df.columns))
     with col3:
         st.metric("Data Size", f"{st.session_state.employees_df.memory_usage(deep=True).sum() / 1024:.1f} KB")
     
@@ -251,24 +180,7 @@ if st.session_state.employees_df is not None:
             file_name=f"personio_employees_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-    
-    # Data preview options
-    with st.expander("🔍 Data Preview Options"):
-        if st.checkbox("Show column information"):
-            st.write("**Column Names and Data Types:**")
-            col_info = pd.DataFrame({
-                'Column': st.session_state.employees_df.columns,
-                'Data Type': st.session_state.employees_df.dtypes.values,
-                'Non-Null Count': st.session_state.employees_df.count().values,
-                'Null Count': st.session_state.employees_df.isnull().sum().values
-            })
-            st.dataframe(col_info, use_container_width=True, hide_index=True)
-        
-        if st.checkbox("Show sample data"):
-            sample_size = st.slider("Number of sample rows", 1, min(20, len(st.session_state.employees_df)), 5)
-            st.write(f"**Sample of {sample_size} rows:**")
-            st.dataframe(st.session_state.employees_df.head(sample_size), use_container_width=True, hide_index=True)
 
 # Footer
 st.markdown("---")
-st.markdown("💡 **Tip:** Keep your API credentials secure and don't share them with others.")
+st.markdown("💡 **Tip:** Keep API credentials secure and don't share them with others.")
