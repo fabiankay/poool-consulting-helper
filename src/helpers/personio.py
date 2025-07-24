@@ -58,7 +58,6 @@ def get_employees(access_token):
         return None, f"Unexpected error: {str(e)}"
 
 
-
 def process_employees_data(employees_data):
     """Convert employees data to pandas DataFrame with improved complex attribute handling"""
     try:
