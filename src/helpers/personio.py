@@ -74,18 +74,14 @@ def process_employees_data(employees_data):
                 
         for employee in employees:
             emp_data = {}
-                        
-            # Basic employee info
-            emp_data['ID (id)'] = employee.get('id')
-            column_mapping['id'] = 'ID (id)'
-                        
+
             # Extract attributes
             attributes = employee.get('attributes', {})
             for key, value in attributes.items():
-                column_name, processed_value = process_attribute(key, value)
-                column_mapping[key] = column_name
+                column_name, processed_value, json_path = process_attribute(key, value)
+                column_mapping[json_path] = column_name
                 emp_data[column_name] = processed_value
-                        
+
             processed_employees.append(emp_data)
                 
         df = pd.DataFrame(processed_employees)
@@ -95,28 +91,44 @@ def process_employees_data(employees_data):
         return None, None, f"Error processing employee data: {str(e)}"
 
 
-def process_attribute(key, value):
-    """Process individual attribute with simplified handling"""
-    
+def process_attribute(key, value, path_prefix=""):
+    """Process individual attribute with JSON path tracking"""
+
+    # Build current path
+    current_path = f"{path_prefix}.{key}" if path_prefix else key
+
     # Simple values
     if not isinstance(value, dict):
-        column_name = f"{key} ({key})"
-        return column_name, value
-    
+        column_name = f"{key} ({current_path})"
+        return column_name, value, current_path
+
     # Get column name from label or key
     label = value.get('label', key)
-    column_name = f"{label} ({key})"
-    
+
     # Extract the actual value
     actual_value = value.get('value', value)
-    
+
+    # Build path based on structure
+    if 'value' in value:
+        # Has a value field, add it to path
+        value_path = f"{current_path}.value"
+    else:
+        value_path = current_path
+
+    column_name = f"{label} ({value_path})"
+
     # Process based on value type
     if isinstance(actual_value, list):
-        return column_name, process_list_value(actual_value)
+        return column_name, process_list_value(actual_value), value_path
     elif isinstance(actual_value, dict):
-        return column_name, process_object_value(actual_value)
+        # Check if it has type and attributes (nested object)
+        if 'attributes' in actual_value:
+            nested_path = f"{value_path}.attributes"
+            return column_name, process_object_value(actual_value), nested_path
+        else:
+            return column_name, process_object_value(actual_value), value_path
     else:
-        return column_name, actual_value
+        return column_name, actual_value, value_path
 
 
 def process_list_value(value_list):
