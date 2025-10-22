@@ -1,0 +1,9 @@
+Company Name,Is Client,Is Supplier,Tag_VIP,Tag_Enterprise,Tag_Marketing,Tag_Supplier,Tag_IT_Services,Tag_German,Customer Number,Payment Terms
+"Acme Corporation",true,false,1,1,1,0,0,0,CLI-001,30
+"Tech Solutions Ltd",false,true,0,0,0,1,1,0,,
+"Global Manufacturing",true,true,0,1,0,1,0,0,CLI-002,45
+"StartUp Innovations",true,false,1,0,1,0,0,0,CLI-003,14
+"Equipment Suppliers Inc",false,true,0,0,0,1,0,0,,
+"MediaTech Solutions",true,false,0,0,1,0,0,0,CLI-004,30
+"Delta Services AB",false,true,0,0,0,1,1,0,,
+"Müller & Partner GmbH",true,false,1,0,0,0,0,1,CLI-005,30

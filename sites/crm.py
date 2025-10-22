@@ -10,8 +10,6 @@ from src.helpers.crm import (
 )
 from src.helpers.poool_api_client import PooolAPIClient
 
-api_key = "31|pFfwDqt0jBixQVA1M8WKFavVm2tajqP2kIzWjghY56fd0f6a"
-
 st.set_page_config(
     page_title="Kontakte Import Tool",
     page_icon="🐨",
@@ -108,7 +106,7 @@ with col3:
 st.markdown("---")
 
 if 'api_key' not in st.session_state:
-    st.session_state.api_key = api_key
+    st.session_state.api_key = ''
 if 'uploaded_data' not in st.session_state:
     st.session_state.uploaded_data = None
 if 'field_mapping' not in st.session_state:
