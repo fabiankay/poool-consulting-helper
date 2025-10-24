@@ -18,7 +18,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("👥 Personio API Query Tool")
+st.title("🧑‍💻 Personio API Query Tool")
 st.markdown("Enter your Personio API credentials to authenticate and retrieve employee data, absences, and attendances.")
 
 # Initialize session state

@@ -16,8 +16,8 @@ from src.helpers.mapping_utils import (
 from src.components.crm_ui import render_environment_selector, render_api_configuration, render_wip_warning
 
 st.set_page_config(
-    page_title="Kontakte Import Tool",
-    page_icon="🐨",
+    page_title="CRM Import Tool",
+    page_icon="📥",
     layout="wide"
 )
 
