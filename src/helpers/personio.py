@@ -1,61 +1,75 @@
+"""
+Personio helper functions using the PersonioAPIClient class.
+
+Provides functions for fetching and processing employee, absence, and attendance data
+from the Personio HR API.
+"""
+
 import pandas as pd
-import requests
-import json
-from datetime import datetime, timedelta
-
-def get_access_token(client_id, client_secret):
-    """Obtain access token from Personio API"""
-    url = "https://api.personio.de/v2/auth/token"
-    headers = {
-        'accept': 'application/json',
-        'content-type': 'application/x-www-form-urlencoded'
-    }
-    data = {
-        'grant_type': 'client_credentials',
-        'client_id': client_id,
-        'client_secret': client_secret
-    }
-    
-    try:
-        response = requests.post(url, headers=headers, data=data)
-        response.raise_for_status()
-        
-        token_data = response.json()
-        access_token = token_data.get('access_token')
-        expires_in = token_data.get('expires_in', 3600)  # Default to 1 hour
-        
-        # Calculate expiration time
-        expires_at = datetime.now() + timedelta(seconds=expires_in - 60)  # Subtract 60s for safety
-        
-        return access_token, expires_at, None
-    except requests.exceptions.RequestException as e:
-        return None, None, f"API request failed: {str(e)}"
-    except json.JSONDecodeError:
-        return None, None, "Invalid JSON response from API"
-    except Exception as e:
-        return None, None, f"Unexpected error: {str(e)}"
+from .personio_api_client import PersonioAPIClient
 
 
-def get_employees(access_token):
-    """Retrieve employees from Personio API"""
-    url = "https://api.personio.de/v1/company/employees"
-    headers = {
-        'accept': 'application/json',
-        'authorization': f'Bearer {access_token}'
-    }
-    
-    try:
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()
-        
-        employees_data = response.json()
-        return employees_data, None
-    except requests.exceptions.RequestException as e:
-        return None, f"API request failed: {str(e)}"
-    except json.JSONDecodeError:
-        return None, "Invalid JSON response from API"
-    except Exception as e:
-        return None, f"Unexpected error: {str(e)}"
+def create_personio_client(client_id: str, client_secret: str) -> PersonioAPIClient:
+    """
+    Create and authenticate a Personio API client.
+
+    Args:
+        client_id: Personio API Client ID
+        client_secret: Personio API Client Secret
+
+    Returns:
+        Authenticated PersonioAPIClient instance, or None if authentication fails
+    """
+    client = PersonioAPIClient(client_id, client_secret)
+    _, _, error = client.authenticate()
+
+    if error:
+        return None
+
+    return client
+
+
+def get_employees(client: PersonioAPIClient):
+    """
+    Retrieve all employees from Personio API with automatic pagination.
+
+    Args:
+        client: Authenticated PersonioAPIClient instance
+
+    Returns:
+        Tuple of (employees_data, error)
+    """
+    return client.get_employees()
+
+
+def get_absences(client: PersonioAPIClient, start_date=None, end_date=None):
+    """
+    Retrieve all absences from Personio API with automatic pagination.
+
+    Args:
+        client: Authenticated PersonioAPIClient instance
+        start_date: Optional start date (YYYY-MM-DD format)
+        end_date: Optional end date (YYYY-MM-DD format)
+
+    Returns:
+        Tuple of (absences_data, error)
+    """
+    return client.get_absences(start_date, end_date)
+
+
+def get_attendances(client: PersonioAPIClient, start_date=None, end_date=None):
+    """
+    Retrieve all attendances from Personio API with automatic pagination.
+
+    Args:
+        client: Authenticated PersonioAPIClient instance
+        start_date: Optional start date (YYYY-MM-DD format)
+        end_date: Optional end date (YYYY-MM-DD format)
+
+    Returns:
+        Tuple of (attendances_data, error)
+    """
+    return client.get_attendances(start_date, end_date)
 
 
 def process_employees_data(employees_data):
@@ -63,15 +77,15 @@ def process_employees_data(employees_data):
     try:
         if 'data' not in employees_data:
             return None, None, "No 'data' field found in API response"
-                
+
         employees = employees_data['data']
         if not employees:
             return pd.DataFrame(), {}, None
-                
+
         # Extract employee information and build column mapping
         processed_employees = []
         column_mapping = {}
-                
+
         for employee in employees:
             emp_data = {}
 
@@ -83,12 +97,92 @@ def process_employees_data(employees_data):
                 emp_data[column_name] = processed_value
 
             processed_employees.append(emp_data)
-                
+
         df = pd.DataFrame(processed_employees)
         return df, column_mapping, None
-        
+
     except Exception as e:
         return None, None, f"Error processing employee data: {str(e)}"
+
+
+def process_absences_data(absences_data):
+    """Convert absences data to pandas DataFrame with column mapping
+
+    Args:
+        absences_data: Raw JSON response from absences API
+
+    Returns:
+        Tuple of (df, column_mapping, error)
+    """
+    try:
+        if 'data' not in absences_data:
+            return None, None, "No 'data' field found in API response"
+
+        absences = absences_data['data']
+        if not absences:
+            return pd.DataFrame(), {}, None
+
+        # Extract absence information and build column mapping
+        processed_absences = []
+        column_mapping = {}
+
+        for absence in absences:
+            absence_record = {}
+
+            # Extract attributes
+            attributes = absence.get('attributes', {})
+            for key, value in attributes.items():
+                column_name, processed_value, json_path = process_attribute(key, value)
+                column_mapping[json_path] = column_name
+                absence_record[column_name] = processed_value
+
+            processed_absences.append(absence_record)
+
+        df = pd.DataFrame(processed_absences)
+        return df, column_mapping, None
+
+    except Exception as e:
+        return None, None, f"Error processing absences data: {str(e)}"
+
+
+def process_attendances_data(attendances_data):
+    """Convert attendances data to pandas DataFrame with column mapping
+
+    Args:
+        attendances_data: Raw JSON response from attendances API
+
+    Returns:
+        Tuple of (df, column_mapping, error)
+    """
+    try:
+        if 'data' not in attendances_data:
+            return None, None, "No 'data' field found in API response"
+
+        attendances = attendances_data['data']
+        if not attendances:
+            return pd.DataFrame(), {}, None
+
+        # Extract attendance information and build column mapping
+        processed_attendances = []
+        column_mapping = {}
+
+        for attendance in attendances:
+            attendance_record = {}
+
+            # Extract attributes
+            attributes = attendance.get('attributes', {})
+            for key, value in attributes.items():
+                column_name, processed_value, json_path = process_attribute(key, value)
+                column_mapping[json_path] = column_name
+                attendance_record[column_name] = processed_value
+
+            processed_attendances.append(attendance_record)
+
+        df = pd.DataFrame(processed_attendances)
+        return df, column_mapping, None
+
+    except Exception as e:
+        return None, None, f"Error processing attendances data: {str(e)}"
 
 
 def process_attribute(key, value, path_prefix=""):
