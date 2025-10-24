@@ -41,11 +41,9 @@ def render_environment_selector() -> Tuple[str, Optional[str]]:
             "Select Environment",
             options=["production", "staging", "custom"],
             index=current_index,
+            key="crm_environment",  # Bind directly to session state for immediate updates
             help="Choose which Poool environment to connect to"
         )
-
-        # Update global state
-        st.session_state.crm_environment = env_option
 
     with col2:
         custom_url = None
