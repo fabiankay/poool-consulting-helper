@@ -490,3 +490,544 @@ def process_entity_tags(client: PooolAPIClient, row_data: pd.Series, tag_mapping
         return get_tag_ids_for_names(client, list(all_tag_names), tag_cache, auto_create)
     else:
         return [], [], None
+
+
+# Update-related functions
+def get_client_fields() -> List[str]:
+    """Return list of fields that belong to the client endpoint."""
+    return [
+        'customer_number', 'payment_time_day_num', 'dunning_blocked', 'dunning_document_blocked',
+        'reference_number_required', 'datev_account', 'leitweg_id', 'datev_is_client_collection',
+        'send_bill_to_email_to', 'send_bill_to_email_cc', 'send_bill_to_email_bcc',
+        'send_by_email', 'send_by_mail', 'number', 'number_unique'
+    ]
+
+
+def get_supplier_fields() -> List[str]:
+    """Return list of fields that belong to the supplier endpoint."""
+    return [
+        'customer_number', 'discount_day_num', 'discount_percentage',
+        'comment_supplier', 'comment_internal', 'datev_account',
+        'number'
+    ]
+
+
+def separate_update_fields_by_endpoint(row_data: Dict, field_mapping: Dict) -> Tuple[Dict, Dict, Dict]:
+    """
+    Separate update data into company, client, and supplier fields.
+    Returns: (company_fields, client_fields, supplier_fields)
+    """
+    client_field_names = set(get_client_fields())
+    supplier_field_names = set(get_supplier_fields())
+
+    company_data = {}
+    client_data = {}
+    supplier_data = {}
+
+    for csv_column, api_field in field_mapping.items():
+        if not api_field or csv_column not in row_data:
+            continue
+
+        value = row_data[csv_column]
+        if value is None or (isinstance(value, str) and not value.strip()):
+            continue
+
+        # Route to appropriate endpoint
+        if api_field in client_field_names:
+            client_data[api_field] = value
+        elif api_field in supplier_field_names:
+            supplier_data[api_field] = value
+        else:
+            # Company endpoint (includes addresses, contacts, tags, etc.)
+            company_data[api_field] = value
+
+    return company_data, client_data, supplier_data
+
+
+def match_company_by_identifier(client: PooolAPIClient, identifier_field: str, identifier_value: str) -> Tuple[Optional[int], Optional[str]]:
+    """
+    Find a company by identifier field and value.
+    Returns: (company_id, error_message)
+    """
+    try:
+        if not identifier_value or not str(identifier_value).strip():
+            return None, "Empty identifier value"
+
+        identifier_value = str(identifier_value).strip()
+
+        # Direct ID lookup
+        if identifier_field.lower() == 'id':
+            try:
+                company_id = int(identifier_value)
+                # Verify company exists
+                company_data, error = client.get_company_by_id(company_id)
+                if error:
+                    return None, f"Company ID {company_id} not found"
+                return company_id, None
+            except ValueError:
+                return None, f"Invalid ID value: {identifier_value}"
+
+        # Search by other fields
+        results, error = client.search_companies_by_field(identifier_field, identifier_value)
+
+        if error:
+            return None, error
+
+        if not results:
+            return None, f"No company found with {identifier_field}='{identifier_value}'"
+
+        # Look for exact match
+        for company in results:
+            company_value = company.get(identifier_field)
+            if company_value and str(company_value).lower() == identifier_value.lower():
+                return company.get('id'), None
+
+        # If no exact match, return first result with warning
+        return results[0].get('id'), f"No exact match, using closest: {results[0].get('name', 'Unknown')}"
+
+    except Exception as e:
+        return None, f"Error matching company: {str(e)}"
+
+
+def match_person_by_identifier(client: PooolAPIClient, identifier_field: str, identifier_value: str) -> Tuple[Optional[int], Optional[str]]:
+    """
+    Find a person by identifier field and value.
+    Returns: (person_id, error_message)
+    """
+    try:
+        if not identifier_value or not str(identifier_value).strip():
+            return None, "Empty identifier value"
+
+        identifier_value = str(identifier_value).strip()
+
+        # Direct ID lookup
+        if identifier_field.lower() == 'id':
+            try:
+                person_id = int(identifier_value)
+                # Verify person exists
+                person_data, error = client.get_person_by_id(person_id)
+                if error:
+                    return None, f"Person ID {person_id} not found"
+                return person_id, None
+            except ValueError:
+                return None, f"Invalid ID value: {identifier_value}"
+
+        # Search by other fields (name, email, etc.)
+        results, error = client.search_persons_by_field(identifier_field, identifier_value)
+
+        if error:
+            return None, error
+
+        if not results:
+            return None, f"No person found with {identifier_field}='{identifier_value}'"
+
+        # Look for exact match
+        for person in results:
+            person_value = person.get(identifier_field)
+            if person_value and str(person_value).lower() == identifier_value.lower():
+                return person.get('id'), None
+
+        # If no exact match, return first result with warning
+        first_person = results[0]
+        name = f"{first_person.get('firstname', '')} {first_person.get('lastname', '')}".strip() or 'Unknown'
+        return first_person.get('id'), f"No exact match, using closest: {name}"
+
+    except Exception as e:
+        return None, f"Error matching person: {str(e)}"
+
+
+def process_single_update(client: PooolAPIClient, index: int, row_data: Dict, field_mapping: Dict,
+                         identifier_field: str, update_type: str, dry_run: bool = False) -> Dict:
+    """
+    Process a single row update for companies or persons.
+    Returns: Dict with success status and details
+    """
+    try:
+        # Clean NaN values
+        clean_data = {k: v for k, v in row_data.items() if pd.notna(v)}
+
+        if update_type == 'companies':
+            # Get identifier value
+            identifier_col = next((col for col, field in field_mapping.items() if field == identifier_field), None)
+            if not identifier_col or identifier_col not in clean_data:
+                return {
+                    'success': False,
+                    'error': f'Identifier field "{identifier_field}" not found in row data'
+                }
+
+            identifier_value = clean_data[identifier_col]
+
+            # Match existing company
+            company_id, match_error = match_company_by_identifier(client, identifier_field, identifier_value)
+
+            if not company_id:
+                return {
+                    'success': False,
+                    'error': match_error or 'Could not match company'
+                }
+
+            # Separate fields by endpoint
+            company_fields, client_fields, supplier_fields = separate_update_fields_by_endpoint(clean_data, field_mapping)
+
+            # Prepare company data if any company fields exist
+            if company_fields:
+                prepared_company_data = prepare_company_data(clean_data,
+                    {k: v for k, v in field_mapping.items() if v in company_fields})
+            else:
+                prepared_company_data = {}
+
+            # Track results
+            results = {'company_id': company_id, 'updates': [], 'dry_run': dry_run}
+            errors = []
+
+            if dry_run:
+                # Dry run mode - simulate updates without API calls
+                if prepared_company_data:
+                    results['updates'].append('company')
+                    results['company_fields'] = list(prepared_company_data.keys())
+                if client_fields:
+                    results['updates'].append('client')
+                    results['client_fields'] = list(client_fields.keys())
+                if supplier_fields:
+                    results['updates'].append('supplier')
+                    results['supplier_fields'] = list(supplier_fields.keys())
+            else:
+                # Actual update mode
+                # Update company endpoint if needed
+                if prepared_company_data:
+                    updated_data, error = client.update_company(company_id, prepared_company_data)
+                    if error:
+                        errors.append(f"Company update failed: {error}")
+                    else:
+                        results['updates'].append('company')
+
+                # Update client endpoint if needed
+                if client_fields:
+                    updated_data, error = client.update_client(company_id, client_fields)
+                    if error:
+                        errors.append(f"Client update failed: {error}")
+                    else:
+                        results['updates'].append('client')
+
+                # Update supplier endpoint if needed
+                if supplier_fields:
+                    updated_data, error = client.update_supplier(company_id, supplier_fields)
+                    if error:
+                        errors.append(f"Supplier update failed: {error}")
+                    else:
+                        results['updates'].append('supplier')
+
+            if errors:
+                return {
+                    'success': False,
+                    'error': '; '.join(errors),
+                    'partial_success': len(results['updates']) > 0,
+                    'results': results
+                }
+
+            return {
+                'success': True,
+                'result': {
+                    'row': index,
+                    'company_id': company_id,
+                    'endpoints_updated': results['updates'],
+                    'identifier': identifier_value
+                }
+            }
+
+        else:  # persons
+            # Get identifier value
+            identifier_col = next((col for col, field in field_mapping.items() if field == identifier_field), None)
+            if not identifier_col or identifier_col not in clean_data:
+                return {
+                    'success': False,
+                    'error': f'Identifier field "{identifier_field}" not found in row data'
+                }
+
+            identifier_value = clean_data[identifier_col]
+
+            # Match existing person
+            person_id, match_error = match_person_by_identifier(client, identifier_field, identifier_value)
+
+            if not person_id:
+                return {
+                    'success': False,
+                    'error': match_error or 'Could not match person'
+                }
+
+            # Prepare person data
+            person_data = prepare_person_data(clean_data, field_mapping)
+
+            if not person_data:
+                return {
+                    'success': False,
+                    'error': 'No valid person data to update'
+                }
+
+            if dry_run:
+                # Dry run mode - simulate update without API call
+                return {
+                    'success': True,
+                    'result': {
+                        'row': index,
+                        'person_id': person_id,
+                        'identifier': identifier_value,
+                        'fields_to_update': list(person_data.keys()),
+                        'dry_run': True
+                    }
+                }
+            else:
+                # Actual update mode
+                updated_data, error = client.update_person(person_id, person_data)
+
+                if error:
+                    return {
+                        'success': False,
+                        'error': f'Person update failed: {error}'
+                    }
+
+                return {
+                    'success': True,
+                    'result': {
+                        'row': index,
+                        'person_id': person_id,
+                        'identifier': identifier_value,
+                        'fields_updated': list(person_data.keys())
+                    }
+                }
+
+    except Exception as e:
+        return {
+            'success': False,
+            'error': f'Unexpected error: {str(e)}'
+        }
+
+
+def bulk_update_companies(api_key: str, df, field_mapping: Dict, identifier_field: str,
+                         environment: str = "production", custom_url: str = None,
+                         dry_run: bool = False) -> Tuple[List[Dict], List[Dict]]:
+    """Bulk update companies from DataFrame."""
+    client = create_api_client(api_key, environment, custom_url)
+
+    successful = []
+    failed = []
+
+    # Pre-convert DataFrame to dict for better performance
+    records = df.to_dict('records')
+
+    for index, row_data in enumerate(records, 1):
+        result = process_single_update(client, index, row_data, field_mapping, identifier_field, 'companies', dry_run)
+
+        if result['success']:
+            successful.append(result['result'])
+        else:
+            failed.append({
+                'row': index,
+                'data': {k: v for k, v in row_data.items() if pd.notna(v)},
+                'error': result['error'],
+                'partial_success': result.get('partial_success', False)
+            })
+
+    return successful, failed
+
+
+def preview_company_matches(api_key: str, df, field_mapping: Dict, identifier_field: str,
+                            environment: str = "production", custom_url: str = None,
+                            preview_limit: int = 20) -> List[Dict]:
+    """
+    Preview how records will be matched without updating.
+
+    Args:
+        api_key: API key
+        df: DataFrame with records
+        field_mapping: CSV column to API field mapping
+        identifier_field: Field to use for matching
+        environment: API environment
+        custom_url: Custom URL if environment is custom
+        preview_limit: Number of records to preview (default 20)
+
+    Returns:
+        List of match preview results
+    """
+    client = create_api_client(api_key, environment, custom_url)
+
+    preview_results = []
+
+    # Get identifier column from mapping
+    identifier_col = next((col for col, field in field_mapping.items() if field == identifier_field), None)
+    if not identifier_col:
+        return [{
+            'error': f'Identifier field "{identifier_field}" not found in field mapping'
+        }]
+
+    # Preview first N records
+    records = df.head(preview_limit).to_dict('records')
+
+    for index, row_data in enumerate(records, 1):
+        # Clean data
+        clean_data = {k: v for k, v in row_data.items() if pd.notna(v)}
+
+        if identifier_col not in clean_data:
+            preview_results.append({
+                'row': index,
+                'identifier_value': 'N/A',
+                'status': '❌ Missing',
+                'company_id': None,
+                'company_name': None,
+                'message': f'Identifier column "{identifier_col}" not found in row'
+            })
+            continue
+
+        identifier_value = clean_data[identifier_col]
+
+        # Try to match
+        company_id, error = match_company_by_identifier(client, identifier_field, identifier_value)
+
+        if company_id:
+            # Get company name
+            company_data, get_error = client.get_company_by_id(company_id)
+            company_name = company_data.get('name', 'Unknown') if company_data else 'Unknown'
+
+            # Check if it was a fuzzy match
+            if error:
+                status = '⚠️ Fuzzy Match'
+                message = error
+            else:
+                status = '✅ Found'
+                message = 'Exact match'
+
+            preview_results.append({
+                'row': index,
+                'identifier_value': str(identifier_value),
+                'status': status,
+                'company_id': company_id,
+                'company_name': company_name,
+                'message': message
+            })
+        else:
+            preview_results.append({
+                'row': index,
+                'identifier_value': str(identifier_value),
+                'status': '❌ Not Found',
+                'company_id': None,
+                'company_name': None,
+                'message': error or 'No match found'
+            })
+
+    return preview_results
+
+
+def bulk_update_persons(api_key: str, df, field_mapping: Dict, identifier_field: str,
+                       environment: str = "production", custom_url: str = None,
+                       dry_run: bool = False) -> Tuple[List[Dict], List[Dict]]:
+    """Bulk update persons from DataFrame."""
+    client = create_api_client(api_key, environment, custom_url)
+
+    successful = []
+    failed = []
+
+    # Pre-convert DataFrame to dict for better performance
+    records = df.to_dict('records')
+
+    for index, row_data in enumerate(records, 1):
+        result = process_single_update(client, index, row_data, field_mapping, identifier_field, 'persons', dry_run)
+
+        if result['success']:
+            successful.append(result['result'])
+        else:
+            failed.append({
+                'row': index,
+                'data': {k: v for k, v in row_data.items() if pd.notna(v)},
+                'error': result['error']
+            })
+
+    return successful, failed
+
+
+def preview_person_matches(api_key: str, df, field_mapping: Dict, identifier_field: str,
+                          environment: str = "production", custom_url: str = None,
+                          preview_limit: int = 20) -> List[Dict]:
+    """
+    Preview how person records will be matched without updating.
+
+    Args:
+        api_key: API key
+        df: DataFrame with records
+        field_mapping: CSV column to API field mapping
+        identifier_field: Field to use for matching (e.g., 'id', 'email', 'firstname')
+        environment: API environment
+        custom_url: Custom URL if environment is custom
+        preview_limit: Number of records to preview (default 20)
+
+    Returns:
+        List of match preview results
+    """
+    client = create_api_client(api_key, environment, custom_url)
+
+    preview_results = []
+
+    # Get identifier column from mapping
+    identifier_col = next((col for col, field in field_mapping.items() if field == identifier_field), None)
+    if not identifier_col:
+        return [{
+            'error': f'Identifier field "{identifier_field}" not found in field mapping'
+        }]
+
+    # Preview first N records
+    records = df.head(preview_limit).to_dict('records')
+
+    for index, row_data in enumerate(records, 1):
+        # Clean data
+        clean_data = {k: v for k, v in row_data.items() if pd.notna(v)}
+
+        if identifier_col not in clean_data:
+            preview_results.append({
+                'row': index,
+                'identifier_value': 'N/A',
+                'status': '❌ Missing',
+                'person_id': None,
+                'person_name': None,
+                'message': f'Identifier column "{identifier_col}" not found in row'
+            })
+            continue
+
+        identifier_value = clean_data[identifier_col]
+
+        # Try to match
+        person_id, error = match_person_by_identifier(client, identifier_field, identifier_value)
+
+        if person_id:
+            # Get person name
+            person_data, get_error = client.get_person_by_id(person_id)
+            if person_data:
+                person_name = f"{person_data.get('firstname', '')} {person_data.get('lastname', '')}".strip() or 'Unknown'
+            else:
+                person_name = 'Unknown'
+
+            # Check if it was a fuzzy match
+            if error:
+                status = '⚠️ Fuzzy Match'
+                message = error
+            else:
+                status = '✅ Found'
+                message = 'Exact match'
+
+            preview_results.append({
+                'row': index,
+                'identifier_value': str(identifier_value),
+                'status': status,
+                'person_id': person_id,
+                'person_name': person_name,
+                'message': message
+            })
+        else:
+            preview_results.append({
+                'row': index,
+                'identifier_value': str(identifier_value),
+                'status': '❌ Not Found',
+                'person_id': None,
+                'person_name': None,
+                'message': error or 'No match found'
+            })
+
+    return preview_results

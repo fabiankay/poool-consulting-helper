@@ -302,6 +302,144 @@ class PooolAPIClient:
         except Exception as e:
             return None, f"Error creating tag: {str(e)}"
 
+    def update_company(self, company_id: int, company_data: Dict) -> Tuple[Optional[Dict], Optional[str]]:
+        """Update a company via API."""
+        try:
+            # Add required type field and wrap in data object
+            company_data["type"] = "company"
+            payload = {"data": company_data}
+
+            response = requests.put(f"{self._base_url}/companies/{company_id}",
+                                   headers=self._headers,
+                                   json=payload,
+                                   timeout=30)
+
+            return self._handle_api_response(response, "company")
+
+        except Exception as e:
+            return None, f"Error updating company: {str(e)}"
+
+    def update_client(self, client_id: int, client_data: Dict) -> Tuple[Optional[Dict], Optional[str]]:
+        """Update client-specific data via API."""
+        try:
+            payload = {"data": client_data}
+
+            response = requests.put(f"{self._base_url}/clients/{client_id}",
+                                   headers=self._headers,
+                                   json=payload,
+                                   timeout=30)
+
+            return self._handle_api_response(response, "client")
+
+        except Exception as e:
+            return None, f"Error updating client: {str(e)}"
+
+    def update_supplier(self, supplier_id: int, supplier_data: Dict) -> Tuple[Optional[Dict], Optional[str]]:
+        """Update supplier-specific data via API."""
+        try:
+            payload = {"data": supplier_data}
+
+            response = requests.put(f"{self._base_url}/suppliers/{supplier_id}",
+                                   headers=self._headers,
+                                   json=payload,
+                                   timeout=30)
+
+            return self._handle_api_response(response, "supplier")
+
+        except Exception as e:
+            return None, f"Error updating supplier: {str(e)}"
+
+    def update_person(self, person_id: int, person_data: Dict) -> Tuple[Optional[Dict], Optional[str]]:
+        """Update a person via API."""
+        try:
+            payload = {"data": person_data}
+
+            response = requests.put(f"{self._base_url}/persons/{person_id}",
+                                   headers=self._headers,
+                                   json=payload,
+                                   timeout=30)
+
+            return self._handle_api_response(response, "person")
+
+        except Exception as e:
+            return None, f"Error updating person: {str(e)}"
+
+    def get_company_by_id(self, company_id: int) -> Tuple[Optional[Dict], Optional[str]]:
+        """Get a specific company by ID."""
+        try:
+            response = requests.get(f"{self._base_url}/companies/{company_id}",
+                                   headers=self._headers,
+                                   timeout=30)
+
+            if response.status_code == 200:
+                data = response.json()
+                return data.get('data', {}), None
+            elif response.status_code == 404:
+                return None, "Company not found"
+            else:
+                return None, f"Failed to get company: HTTP {response.status_code}"
+
+        except Exception as e:
+            return None, f"Error getting company: {str(e)}"
+
+    def search_companies_by_field(self, field: str, value: str) -> Tuple[List[Dict], Optional[str]]:
+        """Search for companies by a specific field value."""
+        try:
+            # Use search parameter for flexible searching
+            params = {'search': value, 'per_page': 10}
+
+            response = requests.get(f"{self._base_url}/companies",
+                                  headers=self._headers,
+                                  params=params,
+                                  timeout=30)
+
+            if response.status_code == 200:
+                data = response.json()
+                return data.get('data', []), None
+            else:
+                return [], f"Search failed: HTTP {response.status_code}"
+
+        except Exception as e:
+            return [], f"Error searching companies: {str(e)}"
+
+    def get_person_by_id(self, person_id: int) -> Tuple[Optional[Dict], Optional[str]]:
+        """Get a specific person by ID."""
+        try:
+            response = requests.get(f"{self._base_url}/persons/{person_id}",
+                                   headers=self._headers,
+                                   timeout=30)
+
+            if response.status_code == 200:
+                data = response.json()
+                return data.get('data', {}), None
+            elif response.status_code == 404:
+                return None, "Person not found"
+            else:
+                return None, f"Failed to get person: HTTP {response.status_code}"
+
+        except Exception as e:
+            return None, f"Error getting person: {str(e)}"
+
+    def search_persons_by_field(self, field: str, value: str) -> Tuple[List[Dict], Optional[str]]:
+        """Search for persons by a specific field value."""
+        try:
+            # Use search parameter for flexible searching
+            params = {'search': value, 'per_page': 10}
+
+            response = requests.get(f"{self._base_url}/persons",
+                                  headers=self._headers,
+                                  params=params,
+                                  timeout=30)
+
+            if response.status_code == 200:
+                data = response.json()
+                return data.get('data', []), None
+            else:
+                return [], f"Search failed: HTTP {response.status_code}"
+
+        except Exception as e:
+            return [], f"Error searching persons: {str(e)}"
+
     def __str__(self) -> str:
         """String representation of the API client."""
         env_info = self.environment_info
