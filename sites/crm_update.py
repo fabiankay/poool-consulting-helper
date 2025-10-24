@@ -15,7 +15,8 @@ from src.components.crm_ui import (
     render_mapping_summary,
     render_preview_matches,
     render_update_execution,
-    render_update_results
+    render_update_results,
+    render_wip_warning
 )
 
 st.set_page_config(
@@ -27,16 +28,14 @@ st.set_page_config(
 st.title("🔄 CRM Update Tool")
 st.markdown("Update existing companies in Poool CRM via API")
 
-st.header("This is :red[experimental] - Work in Progress", divider="red")
+render_wip_warning()
 
 # Environment Toggle
 st.markdown("---")
 environment, custom_url = render_environment_selector()
 st.markdown("---")
 
-# Initialize session state
-if 'api_key' not in st.session_state:
-    st.session_state.api_key = ''
+# Local page-specific session state (not for API/environment)
 if 'uploaded_data' not in st.session_state:
     st.session_state.uploaded_data = None
 if 'field_mapping' not in st.session_state:
@@ -49,7 +48,7 @@ if 'preview_results' not in st.session_state:
     st.session_state.preview_results = None
 
 # API Configuration and File Upload
-col1, col2 = st.columns(2)
+col1, col2 = st.columns([1, 2])
 
 with col1:
     api_key, is_connected = render_api_configuration(test_api_connection)
@@ -58,7 +57,7 @@ with col2:
     df = render_file_uploader("update")
 
 # Main update workflow
-if st.session_state.uploaded_data is not None and st.session_state.api_key:
+if st.session_state.uploaded_data is not None and st.session_state.crm_api_key:
     st.markdown("---")
     st.subheader("🎯 Update Configuration")
 

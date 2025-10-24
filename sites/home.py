@@ -20,7 +20,7 @@ with col1:
     st.markdown("**📥 CRM Import**")
     st.markdown("""
     - Import companies and persons from CSV/Excel
-    - Field mapping with auto-detection
+    - Client / Supplier Selection
     - Tag management
     - JSON configurations
     """)
@@ -72,22 +72,22 @@ st.markdown("---")
 st.subheader("📝 Quick Start")
 
 st.markdown("""
-**1. Choose Environment**
+**Choose Environment**
 - Production: Live data
 - Staging: Test environment
 - Custom: Sandbox URL
 
-**2. API Setup**
+**API Setup**
 - Enter API key
 - Test connection
 
-**3. Common Tasks**
+**Common Tasks**
 - Import new data → CRM Import
 - Update existing data → CRM/Person Update
 - Export HR data → Personio
 
 **Tips:**
-- Start with staging environment
+- Start with staging or sandbox environment
 - Use dry run mode before updates
 - Save JSON mappings for reuse
 """)

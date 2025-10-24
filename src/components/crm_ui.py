@@ -8,44 +8,57 @@ across different CRM operations.
 import streamlit as st
 import pandas as pd
 from typing import Tuple, Optional
+from .session_state import init_global_crm_state
+
+
+def render_wip_warning():
+    """Render a consistent 'Work in Progress' warning banner."""
+    st.header("This is :red[experimental] - Work in Progress", divider="red")
 
 
 def render_environment_selector() -> Tuple[str, Optional[str]]:
     """
-    Render environment selection UI.
+    Render environment selection UI using global CRM session state.
 
     Returns:
         Tuple of (environment, custom_url)
     """
+    # Initialize global state
+    init_global_crm_state()
+
     st.subheader("🌍 Environment Selection")
 
     col1, col2, col3 = st.columns(3)
 
     with col1:
+        # Get current index from global state
+        try:
+            current_index = ["production", "staging", "custom"].index(st.session_state.crm_environment)
+        except ValueError:
+            current_index = 0
+
         env_option = st.radio(
             "Select Environment",
             options=["production", "staging", "custom"],
-            index=0,
+            index=current_index,
             help="Choose which Poool environment to connect to"
         )
 
-        if 'environment' not in st.session_state:
-            st.session_state.environment = env_option
-        else:
-            st.session_state.environment = env_option
+        # Update global state
+        st.session_state.crm_environment = env_option
 
     with col2:
         custom_url = None
         if env_option == 'custom':
             custom_url = st.text_input(
                 "Custom URL (Sandbox)",
-                value=st.session_state.get('custom_url', ''),
+                value=st.session_state.crm_custom_url or '',
                 placeholder="https://your-sandbox.poool.rocks",
                 help="Enter your sandbox environment URL"
             )
-            st.session_state.custom_url = custom_url
+            st.session_state.crm_custom_url = custom_url
         else:
-            st.session_state.custom_url = None
+            st.session_state.crm_custom_url = None
 
     with col3:
         if env_option == 'production':
@@ -60,7 +73,7 @@ def render_environment_selector() -> Tuple[str, Optional[str]]:
 
 def render_api_configuration(test_connection_callback) -> Tuple[str, bool]:
     """
-    Render API configuration UI with test connection.
+    Render API configuration UI with test connection using global CRM session state.
 
     Args:
         test_connection_callback: Function to call for testing connection
@@ -68,11 +81,14 @@ def render_api_configuration(test_connection_callback) -> Tuple[str, bool]:
     Returns:
         Tuple of (api_key, is_connected)
     """
+    # Initialize global state
+    init_global_crm_state()
+
     st.subheader("🔑 API Configuration")
 
     user_api_key = st.text_input(
         "Poool API Key",
-        value=st.session_state.get('api_key', ''),
+        value=st.session_state.crm_api_key,
         type="password",
         placeholder="Enter your API key...",
         help="Your Poool CRM API key"
@@ -83,8 +99,8 @@ def render_api_configuration(test_connection_callback) -> Tuple[str, bool]:
             st.error("Please enter an API key")
             return user_api_key, False
         else:
-            current_env = st.session_state.get('environment', 'production')
-            custom_url = st.session_state.get('custom_url') if current_env == 'custom' else None
+            current_env = st.session_state.crm_environment
+            custom_url = st.session_state.crm_custom_url if current_env == 'custom' else None
 
             if current_env == 'custom' and not custom_url:
                 st.error("Please enter a custom URL for sandbox environment")
@@ -94,14 +110,14 @@ def render_api_configuration(test_connection_callback) -> Tuple[str, bool]:
                 is_valid, message = test_connection_callback(user_api_key, current_env, custom_url)
 
                 if is_valid:
-                    st.session_state.api_key = user_api_key
+                    st.session_state.crm_api_key = user_api_key
                     st.success(f"✅ API connection successful to **{current_env}**!")
                     st.rerun()
                 else:
                     st.error(f"❌ Connection failed to {current_env}: {message}")
                     return user_api_key, False
 
-    if st.session_state.get('api_key') and st.session_state.api_key == user_api_key:
+    if st.session_state.crm_api_key and st.session_state.crm_api_key == user_api_key:
         st.success("🟢 API Ready")
         return user_api_key, True
 
@@ -270,7 +286,7 @@ def render_preview_matches(df: pd.DataFrame, field_mapping: dict, identifier_fie
                 custom_url = st.session_state.get('custom_url') if current_env == 'custom' else None
 
                 preview_results = preview_function(
-                    st.session_state.api_key,
+                    st.session_state.crm_api_key,
                     df,
                     field_mapping,
                     identifier_field,
@@ -356,7 +372,7 @@ def render_update_execution(df: pd.DataFrame, field_mapping: dict, identifier_fi
                 custom_url = st.session_state.get('custom_url') if current_env == 'custom' else None
 
                 successful, failed = bulk_update_function(
-                    st.session_state.api_key,
+                    st.session_state.crm_api_key,
                     df,
                     field_mapping,
                     identifier_field,

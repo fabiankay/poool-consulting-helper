@@ -8,7 +8,12 @@ from src.helpers.crm import (
     validate_import_data,
     detect_tag_columns, bulk_import_companies, bulk_import_persons
 )
-from src.helpers.poool_api_client import PooolAPIClient
+from src.helpers.mapping_utils import (
+    get_current_mapping_for_field,
+    export_mapping_to_json,
+    import_mapping_from_json
+)
+from src.components.crm_ui import render_environment_selector, render_api_configuration, render_wip_warning
 
 st.set_page_config(
     page_title="Kontakte Import Tool",
@@ -16,99 +21,17 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🏢 CRM Import Tool")
+st.title("📥 CRM Import Tool")
 st.markdown("Upload CSV/Excel files to create companies and contacts in Poool CRM via API")
 
-st.header("This is :red[experimental] - Work in Progress", divider="red")
+render_wip_warning()
 
 # Environment Toggle
 st.markdown("---")
-col1, col2, col3 = st.columns([2, 1, 1])
-
-with col1:
-    # Initialize environment in session state if not present
-    if 'environment' not in st.session_state:
-        st.session_state.environment = 'production'
-
-    # Get current index safely
-    try:
-        current_index = ["production", "staging", "custom"].index(st.session_state.environment)
-    except ValueError:
-        current_index = 0
-        st.session_state.environment = 'production'  # Reset to valid state
-
-    environment = st.radio(
-        "🌐 **API Environment**",
-        options=["production", "staging", "custom"],
-        index=current_index,
-        horizontal=True,
-        help="Choose whether to connect to production, staging, or custom environment"
-    )
-
-    # Update session state and rerun if changed
-    if environment != st.session_state.environment:
-        st.session_state.environment = environment
-        st.rerun()
-
-    # Custom URL input when custom environment is selected
-    if environment == "custom":
-        if 'custom_url' not in st.session_state:
-            st.session_state.custom_url = ''
-
-        custom_url = st.text_input(
-            "Custom Base URL",
-            value=st.session_state.custom_url,
-            placeholder="https://your-sandbox.poool.rocks",
-            help="Enter your custom Poool API base URL (e.g., https://your-sandbox.poool.rocks)",
-            key="custom_url_input"
-        )
-
-        # Update session state only if changed
-        if custom_url != st.session_state.custom_url:
-            st.session_state.custom_url = custom_url
-    else:
-        # Clear custom URL when not using custom environment
-        if st.session_state.get('custom_url'):
-            st.session_state.custom_url = None
-
-with col2:
-    # Use API client to get environment info for consistent display
-    try:
-        dummy_client = PooolAPIClient("dummy", environment, st.session_state.get('custom_url'))
-        env_info = dummy_client.environment_info
-
-        if environment == "production":
-            st.success(f"{env_info['display']} **{env_info['name']}**")
-        elif environment == "staging":
-            st.warning(f"{env_info['display']} **{env_info['name']}**")
-        else:  # custom
-            st.info(f"{env_info['display']} **{env_info['name']}**")
-
-        st.caption(env_info['url'])
-    except:
-        # Fallback to manual display if client creation fails
-        if environment == "production":
-            st.success("🟢 **LIVE** Production")
-            st.caption("app.poool.cc")
-        elif environment == "staging":
-            st.warning("🟡 **TEST** Staging")
-            st.caption("staging-app.poool.rocks")
-        else:
-            st.info("🔧 **CUSTOM** Sandbox")
-            st.caption("URL not configured")
-
-with col3:
-    if environment == "production":
-        st.error("⚠️ **CAUTION**: Live data!")
-    elif environment == "staging":
-        st.info("💡 Safe testing environment")
-    else:  # custom
-        st.info("🧪 Sandbox environment")
-
+environment, custom_url = render_environment_selector()
 st.markdown("---")
 
-if 'api_key' not in st.session_state:
-    st.session_state.api_key = ''
+# Local page-specific session state (not for API/environment)
 if 'uploaded_data' not in st.session_state:
     st.session_state.uploaded_data = None
 if 'field_mapping' not in st.session_state:
@@ -121,105 +44,6 @@ if 'final_tag_mappings' not in st.session_state:
     st.session_state.final_tag_mappings = {}
 if 'mapping_file_processed' not in st.session_state:
     st.session_state.mapping_file_processed = False
-
-def _get_current_mapping_for_field(field: str) -> str:
-    """Get the currently mapped CSV column for a given API field."""
-    for csv_col, api_field in st.session_state.field_mapping.items():
-        if api_field == field:
-            return csv_col
-    return ''
-
-def _export_mapping_to_json() -> str:
-    """Export current mapping configuration to JSON format."""
-    import json
-
-    mapping_config = {
-        "field_mapping": st.session_state.field_mapping,
-        "final_tag_mappings": st.session_state.get('final_tag_mappings', {}),
-        "manual_tag_mappings": st.session_state.get('manual_tag_mappings', {})
-    }
-
-    return json.dumps(mapping_config, indent=2)
-
-def _import_mapping_from_json(json_content: str, csv_columns: list) -> tuple[bool, list[str]]:
-    """
-    Import mapping configuration from JSON.
-    Returns (success, messages) where messages contains warnings/errors.
-    """
-    import json
-
-    messages = []
-
-    try:
-        mapping_config = json.loads(json_content)
-
-        # Validate JSON structure
-        if not isinstance(mapping_config, dict):
-            return False, ["Error: JSON must be an object/dictionary"]
-
-        # Get available CSV columns (excluding empty string)
-        available_columns = set(csv_columns) - {''}
-
-        # Import field_mapping with validation
-        if 'field_mapping' in mapping_config:
-            field_mapping = mapping_config['field_mapping']
-            matched_mappings = {}
-            missing_columns = []
-
-            for csv_col, api_field in field_mapping.items():
-                if csv_col in available_columns:
-                    matched_mappings[csv_col] = api_field
-                else:
-                    missing_columns.append(csv_col)
-
-            st.session_state.field_mapping = matched_mappings
-
-            if matched_mappings:
-                messages.append(f"Success: Imported {len(matched_mappings)} field mappings")
-
-            if missing_columns:
-                messages.append(f"Warning: {len(missing_columns)} columns from JSON not found in CSV: {', '.join(missing_columns[:5])}")
-
-        # Import tag mappings
-        if 'final_tag_mappings' in mapping_config:
-            tag_mappings = mapping_config['final_tag_mappings']
-            matched_tag_mappings = {}
-            missing_tag_columns = []
-
-            for csv_col, format_type in tag_mappings.items():
-                if csv_col in available_columns:
-                    matched_tag_mappings[csv_col] = format_type
-                else:
-                    missing_tag_columns.append(csv_col)
-
-            st.session_state.final_tag_mappings = matched_tag_mappings
-
-            if matched_tag_mappings:
-                messages.append(f"Success: Imported {len(matched_tag_mappings)} tag mappings")
-
-            if missing_tag_columns:
-                messages.append(f"Warning: {len(missing_tag_columns)} tag columns from JSON not found in CSV")
-
-        # Import manual tag mappings
-        if 'manual_tag_mappings' in mapping_config:
-            manual_mappings = mapping_config['manual_tag_mappings']
-            matched_manual_mappings = {}
-
-            for csv_col, format_type in manual_mappings.items():
-                if csv_col in available_columns:
-                    matched_manual_mappings[csv_col] = format_type
-
-            st.session_state.manual_tag_mappings = matched_manual_mappings
-
-        if not messages:
-            messages.append("Warning: No mappings found in JSON file")
-
-        return True, messages
-
-    except json.JSONDecodeError as e:
-        return False, [f"Error: Invalid JSON format - {str(e)}"]
-    except Exception as e:
-        return False, [f"Error: Failed to import mappings - {str(e)}"]
 
 
 def _update_field_mapping(field: str, selected_column: str):
@@ -293,7 +117,7 @@ def _get_field_examples():
 
 def _render_field_mapping_selectbox(field: str, csv_columns: list, field_type: str):
     """Render a selectbox for field mapping with consistent logic."""
-    current_mapping = _get_current_mapping_for_field(field)
+    current_mapping = get_current_mapping_for_field(field, st.session_state.field_mapping)
     examples = _get_field_examples()
 
     help_text = examples.get(field, f"Map CSV column to {field}")
@@ -322,8 +146,8 @@ def _show_relationship_preview(csv_columns: list):
     """Show a preview of detected relationships based on current mapping."""
     if not st.session_state.uploaded_data.empty:
         # Get current client/supplier mappings
-        client_col = _get_current_mapping_for_field('is_client')
-        supplier_col = _get_current_mapping_for_field('is_supplier')
+        client_col = get_current_mapping_for_field('is_client', st.session_state.field_mapping)
+        supplier_col = get_current_mapping_for_field('is_supplier', st.session_state.field_mapping)
 
         if client_col or supplier_col:
             st.markdown("**Relationship Preview** 🔍")
@@ -367,7 +191,7 @@ def _show_relationship_preview(csv_columns: list):
 def _show_client_preview(csv_columns: list):
     """Show a preview of detected client relationships based on current mapping."""
     if not st.session_state.uploaded_data.empty:
-        client_col = _get_current_mapping_for_field('is_client')
+        client_col = get_current_mapping_for_field('is_client', st.session_state.field_mapping)
 
         if client_col:
             st.markdown("**Client Preview** 💼")
@@ -405,7 +229,7 @@ def _show_client_preview(csv_columns: list):
 def _show_supplier_preview(csv_columns: list):
     """Show a preview of detected supplier relationships based on current mapping."""
     if not st.session_state.uploaded_data.empty:
-        supplier_col = _get_current_mapping_for_field('is_supplier')
+        supplier_col = get_current_mapping_for_field('is_supplier', st.session_state.field_mapping)
 
         if supplier_col:
             st.markdown("**Supplier Preview** 🏭")
@@ -722,7 +546,7 @@ def _execute_import_with_progress(import_type: str, row_count: int):
             status_text.text(f"Creating {row_count} companies...")
             progress_bar.progress(20)
             successful, failed = bulk_import_companies(
-                st.session_state.api_key,
+                st.session_state.crm_api_key,
                 st.session_state.uploaded_data,
                 st.session_state.field_mapping,
                 st.session_state.get('environment', 'production'),
@@ -733,7 +557,7 @@ def _execute_import_with_progress(import_type: str, row_count: int):
             status_text.text(f"Creating {row_count} persons...")
             progress_bar.progress(20)
             successful, failed = bulk_import_persons(
-                st.session_state.api_key,
+                st.session_state.crm_api_key,
                 st.session_state.uploaded_data,
                 st.session_state.field_mapping,
                 st.session_state.get('environment', 'production'),
@@ -842,44 +666,12 @@ def _display_validation_messages(validation_errors: list):
 col1, col2 = st.columns([1, 2])
 
 with col1:
-    st.subheader("🔑 API Configuration")
-
-    user_api_key = st.text_input(
-        "API Key",
-        value=st.session_state.api_key,
-        type="password",
-        help="Your Poool API Key"
-    )
-
-    if st.button("🔍 Test Connection", type="primary"):
-        if not user_api_key:
-            st.error("Please enter an API key")
-        else:
-            current_env = st.session_state.get('environment', 'production')
-            custom_url = st.session_state.get('custom_url') if current_env == 'custom' else None
-
-            # Validate custom URL if required
-            if current_env == 'custom' and not custom_url:
-                st.error("Please enter a custom URL for sandbox environment")
-                st.stop()
-
-            with st.spinner(f"Testing API connection to {current_env}..."):
-                is_valid, message = test_api_connection(user_api_key, current_env, custom_url)
-
-                if is_valid:
-                    st.session_state.api_key = user_api_key
-                    st.success(f"✅ API connection successful to **{current_env}**!")
-                    st.rerun()
-                else:
-                    st.error(f"❌ Connection failed to {current_env}: {message}")
-
-    if st.session_state.api_key and st.session_state.api_key == user_api_key:
-        st.success("🟢 API Ready")
+    api_key, is_connected = render_api_configuration(test_api_connection)
 
 with col2:
     st.subheader("📁 File Upload & Type")
 
-    if st.session_state.api_key:
+    if st.session_state.crm_api_key:
         import_type = st.selectbox(
             "Import Type",
             options=['companies', 'persons'],
@@ -947,7 +739,11 @@ if st.session_state.uploaded_data is not None:
     with col1:
         # Download mapping as JSON
         if st.session_state.field_mapping or st.session_state.get('final_tag_mappings'):
-            json_str = _export_mapping_to_json()
+            json_str = export_mapping_to_json(
+                st.session_state.field_mapping,
+                st.session_state.get('final_tag_mappings', {}),
+                st.session_state.get('manual_tag_mappings', {})
+            )
             st.download_button(
                 label="📥 Download Mapping",
                 data=json_str,
@@ -972,7 +768,15 @@ if st.session_state.uploaded_data is not None:
         if uploaded_mapping is not None and not st.session_state.mapping_file_processed:
             try:
                 json_content = uploaded_mapping.read().decode('utf-8')
-                success, messages = _import_mapping_from_json(json_content, csv_columns)
+                imported_config, messages = import_mapping_from_json(json_content, csv_columns)
+
+                # Apply imported configuration to session state
+                if imported_config['field_mapping']:
+                    st.session_state.field_mapping = imported_config['field_mapping']
+                if imported_config['final_tag_mappings']:
+                    st.session_state.final_tag_mappings = imported_config['final_tag_mappings']
+                if imported_config['manual_tag_mappings']:
+                    st.session_state.manual_tag_mappings = imported_config['manual_tag_mappings']
 
                 # Display messages
                 for message in messages:
