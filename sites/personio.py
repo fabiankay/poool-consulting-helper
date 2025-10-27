@@ -137,14 +137,23 @@ if st.session_state.personio_client and is_client_valid():
                     columns=['DataFrame Column']
                 ).reset_index().rename(columns={'index': 'API Field'})
 
-                # Count not null and not empty values per column
-                not_null_not_empty = st.session_state.employees_df.apply(
-                    lambda col: col.notnull() & (col.astype(str).str.strip() != ''), axis=0
-                ).sum().values
-                # Count null or empty values per column
-                null_or_empty = st.session_state.employees_df.apply(
-                    lambda col: col.isnull() | (col.astype(str).str.strip() == ''), axis=0
-                ).sum().values
+                # Count not null and not empty values per column in mapping
+                not_null_not_empty = []
+                null_or_empty = []
+
+                for _, row in mapping_df.iterrows():
+                    col_name = row['DataFrame Column']
+                    if col_name in st.session_state.employees_df.columns:
+                        col_data = st.session_state.employees_df[col_name]
+                        not_null_not_empty.append(
+                            ((col_data.notnull()) & (col_data.astype(str).str.strip() != '')).sum()
+                        )
+                        null_or_empty.append(
+                            ((col_data.isnull()) | (col_data.astype(str).str.strip() == '')).sum()
+                        )
+                    else:
+                        not_null_not_empty.append(0)
+                        null_or_empty.append(0)
 
                 mapping_df['Not Null & Not Empty Count'] = not_null_not_empty
                 mapping_df['Null or Empty Count'] = null_or_empty
@@ -242,14 +251,23 @@ if st.session_state.personio_client and is_client_valid():
                     columns=['DataFrame Column']
                 ).reset_index().rename(columns={'index': 'API Field'})
 
-                # Count not null and not empty values per column
-                not_null_not_empty = st.session_state.absences_df.apply(
-                    lambda col: col.notnull() & (col.astype(str).str.strip() != ''), axis=0
-                ).sum().values
-                # Count null or empty values per column
-                null_or_empty = st.session_state.absences_df.apply(
-                    lambda col: col.isnull() | (col.astype(str).str.strip() == ''), axis=0
-                ).sum().values
+                # Count not null and not empty values per column in mapping
+                not_null_not_empty = []
+                null_or_empty = []
+
+                for _, row in mapping_df.iterrows():
+                    col_name = row['DataFrame Column']
+                    if col_name in st.session_state.absences_df.columns:
+                        col_data = st.session_state.absences_df[col_name]
+                        not_null_not_empty.append(
+                            ((col_data.notnull()) & (col_data.astype(str).str.strip() != '')).sum()
+                        )
+                        null_or_empty.append(
+                            ((col_data.isnull()) | (col_data.astype(str).str.strip() == '')).sum()
+                        )
+                    else:
+                        not_null_not_empty.append(0)
+                        null_or_empty.append(0)
 
                 mapping_df['Not Null & Not Empty Count'] = not_null_not_empty
                 mapping_df['Null or Empty Count'] = null_or_empty
@@ -351,14 +369,23 @@ if st.session_state.personio_client and is_client_valid():
                     columns=['DataFrame Column']
                 ).reset_index().rename(columns={'index': 'API Field'})
 
-                # Count not null and not empty values per column
-                not_null_not_empty = st.session_state.attendances_df.apply(
-                    lambda col: col.notnull() & (col.astype(str).str.strip() != ''), axis=0
-                ).sum().values
-                # Count null or empty values per column
-                null_or_empty = st.session_state.attendances_df.apply(
-                    lambda col: col.isnull() | (col.astype(str).str.strip() == ''), axis=0
-                ).sum().values
+                # Count not null and not empty values per column in mapping
+                not_null_not_empty = []
+                null_or_empty = []
+
+                for _, row in mapping_df.iterrows():
+                    col_name = row['DataFrame Column']
+                    if col_name in st.session_state.attendances_df.columns:
+                        col_data = st.session_state.attendances_df[col_name]
+                        not_null_not_empty.append(
+                            ((col_data.notnull()) & (col_data.astype(str).str.strip() != '')).sum()
+                        )
+                        null_or_empty.append(
+                            ((col_data.isnull()) | (col_data.astype(str).str.strip() == '')).sum()
+                        )
+                    else:
+                        not_null_not_empty.append(0)
+                        null_or_empty.append(0)
 
                 mapping_df['Not Null & Not Empty Count'] = not_null_not_empty
                 mapping_df['Null or Empty Count'] = null_or_empty
