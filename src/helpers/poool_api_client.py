@@ -202,6 +202,118 @@ class PooolAPIClient:
         except Exception as e:
             return None, f"Fehler beim Erstellen der Person: {str(e)}"
 
+    def get_all_countries(self) -> Tuple[Dict[str, int], Optional[str]]:
+        """
+        Retrieve all available countries and return name-to-ID mapping.
+
+        Maps various name formats (German, local, international, ISO codes) to country IDs
+        for flexible lookup during imports.
+
+        Returns:
+            Tuple of (country_mapping, error_message) where country_mapping is a dict
+            with lowercase country names/codes as keys and country IDs as values
+        """
+        country_mapping = {}
+        page = 1
+
+        try:
+            while True:
+                url = f"{self._base_url}/countries"
+                params = {"page": page}
+
+                response = requests.get(url, headers=self._headers, params=params, timeout=30)
+
+                if response.status_code != 200:
+                    return {}, f"Fehler beim Abrufen der Länder: {response.status_code} - {response.text}"
+
+                data = response.json()
+                countries = data.get('data', [])
+
+                if not countries:
+                    break
+
+                # Extract all name variants and ID from each country
+                for country in countries:
+                    country_id = country.get('id')
+                    if not country_id:
+                        continue
+
+                    # Collect all possible name variants for this country
+                    name_variants = []
+
+                    # Add all name fields
+                    if country.get('name_german'):
+                        name_variants.append(country['name_german'])
+                    if country.get('name_local'):
+                        name_variants.append(country['name_local'])
+                    if country.get('name_international'):
+                        name_variants.append(country['name_international'])
+
+                    # Add ISO codes
+                    if country.get('iso_3166_alpha2'):
+                        name_variants.append(country['iso_3166_alpha2'])
+                    if country.get('iso_3166_alpha3'):
+                        name_variants.append(country['iso_3166_alpha3'])
+
+                    # Map all variants (case-insensitive) to the country ID
+                    for name in name_variants:
+                        if name and name.strip():
+                            country_mapping[name.strip().lower()] = country_id
+
+                # Check if there are more pages
+                links = data.get('links', {})
+                if not links.get('next'):
+                    break
+
+                page += 1
+
+        except Exception as e:
+            return {}, f"Fehler beim Abrufen der Länder: {str(e)}"
+
+        return country_mapping, None
+
+    def create_country(self, country_name: str) -> Tuple[Optional[Dict], Optional[str]]:
+        """
+        Create a new country.
+
+        Args:
+            country_name: Name of the country to create
+
+        Returns:
+            Tuple of (country_data, error_message)
+        """
+        try:
+            url = f"{self._base_url}/countries"
+
+            country_data = {
+                "data": {
+                    "name_german": country_name.strip(),
+                    "name_local": country_name.strip(),
+                    "name_international": country_name.strip()
+                }
+            }
+
+            response = requests.post(url, headers=self._headers, json=country_data, timeout=30)
+
+            if response.status_code in [200, 201]:
+                result = response.json()
+                return result.get('data', {}), None
+            else:
+                try:
+                    error_data = response.json()
+                    if 'errors' in error_data:
+                        errors = error_data['errors']
+                        error_msgs = []
+                        for field, msgs in errors.items():
+                            error_msgs.append(f"{field}: {', '.join(msgs)}")
+                        return None, f"Fehler beim Erstellen des Landes: {'; '.join(error_msgs)}"
+                    return None, f"Fehler beim Erstellen des Landes: {error_data.get('message', response.text)}"
+                except:
+                    return None, f"Fehler beim Erstellen des Landes: HTTP {response.status_code}"
+
+        except Exception as e:
+            return None, f"Fehler beim Erstellen des Landes: {str(e)}"
+
     def get_all_tags(self) -> Tuple[Dict[str, int], Optional[str]]:
         """Retrieve all available tags and return name-to-ID mapping."""
         tag_mapping = {}

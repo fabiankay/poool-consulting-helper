@@ -56,11 +56,8 @@ def get_optional_company_fields() -> List[str]:
         # Tags
         "tags",
 
-        # Generic additional info
-        "additional_information_a", "additional_information_b", "additional_information_c",
-
         # Complex fields (create nested objects)
-        "address_street", "address_house_number", "address_zip", "address_city",
+        "address_street", "address_house_number", "address_zip", "address_city", "address_country", "address_title",
         "contact_phone", "contact_email", "contact_website"
     ]
 
@@ -76,12 +73,11 @@ def get_optional_person_fields() -> List[str]:
         "company", "company_id", "company_subsidiary_id", "email", "phone",
         "salutation", "title", "middlename", "middle_name", "nickname",
         "position", "function", "department", "maiden_name",
-        "additional_information_a", "additional_information_b", "additional_information_c",
         "tags", "contacts"
     ]
 
 
-def prepare_company_data(row_data: Dict, field_mapping: Dict) -> Dict:
+def prepare_company_data(row_data: Dict, field_mapping: Dict, client: Optional[PooolAPIClient] = None, country_cache: Optional[Dict[str, int]] = None) -> Dict:
     """Prepare company data for API submission using field mapping."""
     company_data = {}
     complex_fields = {}
@@ -123,12 +119,68 @@ def prepare_company_data(row_data: Dict, field_mapping: Dict) -> Dict:
 
     # Process complex fields if any exist
     if complex_fields:
-        _add_complex_fields_to_company(company_data, complex_fields)
+        _add_complex_fields_to_company(company_data, complex_fields, client, country_cache)
 
     return company_data
 
 
-def _add_complex_fields_to_company(company_data: Dict, complex_fields: Dict) -> None:
+def lookup_or_create_country_id(client: PooolAPIClient, country_name: str, country_cache: Dict[str, int]) -> Optional[int]:
+    """
+    Look up country ID by name, or create country if it doesn't exist.
+
+    Searches the country cache (case-insensitive) for the country name. If not found,
+    creates a new country via API and adds it to the cache.
+
+    Args:
+        client: PooolAPIClient instance
+        country_name: Name of the country to look up or create
+        country_cache: Dict mapping lowercase country names to IDs (mutated if country is created)
+
+    Returns:
+        Country ID if found/created, None if error
+    """
+    if not country_name or not country_name.strip():
+        return None
+
+    # Normalize the country name for lookup
+    normalized_name = country_name.strip().lower()
+
+    # Check if country exists in cache
+    if normalized_name in country_cache:
+        return country_cache[normalized_name]
+
+    # Country not found in cache, create it
+    created_country, error = client.create_country(country_name)
+
+    if error:
+        # Log error but don't fail the import
+        print(f"Warning: Could not create country '{country_name}': {error}")
+        return None
+
+    if created_country and 'id' in created_country:
+        country_id = created_country['id']
+
+        # Add all name variants to cache for future lookups
+        if created_country.get('name_german'):
+            country_cache[created_country['name_german'].lower()] = country_id
+        if created_country.get('name_local'):
+            country_cache[created_country['name_local'].lower()] = country_id
+        if created_country.get('name_international'):
+            country_cache[created_country['name_international'].lower()] = country_id
+        if created_country.get('iso_3166_alpha2'):
+            country_cache[created_country['iso_3166_alpha2'].lower()] = country_id
+        if created_country.get('iso_3166_alpha3'):
+            country_cache[created_country['iso_3166_alpha3'].lower()] = country_id
+
+        # Also add the original name used for creation
+        country_cache[normalized_name] = country_id
+
+        return country_id
+
+    return None
+
+
+def _add_complex_fields_to_company(company_data: Dict, complex_fields: Dict, client: Optional[PooolAPIClient] = None, country_cache: Optional[Dict[str, int]] = None) -> None:
     """Add addresses and contacts arrays to company data."""
     addresses = []
     contacts = []
@@ -143,8 +195,22 @@ def _add_complex_fields_to_company(company_data: Dict, complex_fields: Dict) -> 
 
     # Create address if any address fields exist
     if any(address_data.values()):
-        address = {"is_preferred": True, "pos": 1, "country_id": 434}
+        # Use provided title or default to "Hauptanschrift"
+        address_title = complex_fields.get("address_title", "Hauptanschrift")
+        address = {"is_preferred": True, "pos": 1, "title": address_title}
         address.update({k: v for k, v in address_data.items() if v})
+
+        # Handle country if provided
+        if complex_fields.get("address_country"):
+            if client and country_cache is not None:
+                country_id = lookup_or_create_country_id(
+                    client,
+                    complex_fields["address_country"],
+                    country_cache
+                )
+                if country_id:
+                    address["country_id"] = country_id
+
         addresses.append(address)
 
     # Create contacts
@@ -286,7 +352,7 @@ def validate_import_data(df, field_mapping: Dict, import_type: str) -> Tuple[boo
     return not has_errors, all_messages
 
 
-def process_single_import(client: PooolAPIClient, index: int, row_data: Dict, field_mapping: Dict, import_type: str) -> Dict:
+def process_single_import(client: PooolAPIClient, index: int, row_data: Dict, field_mapping: Dict, import_type: str, country_cache: Optional[Dict[str, int]] = None) -> Dict:
     """Process a single row import for companies or persons."""
     try:
         # Clean NaN values efficiently
@@ -294,7 +360,7 @@ def process_single_import(client: PooolAPIClient, index: int, row_data: Dict, fi
 
         # Prepare data based on import type
         if import_type == 'companies':
-            prepared_data = prepare_company_data(clean_data, field_mapping)
+            prepared_data = prepare_company_data(clean_data, field_mapping, client, country_cache)
 
             # Early validation
             if not prepared_data.get('name'):
@@ -344,11 +410,20 @@ def bulk_import_generic(client: PooolAPIClient, df, field_mapping: Dict, import_
     successful = []
     failed = []
 
+    # Initialize country cache for address country lookups
+    country_cache = {}
+    if import_type == 'companies':
+        # Fetch all countries once at the start of import
+        country_cache, error = client.get_all_countries()
+        if error:
+            print(f"Warning: Could not fetch countries: {error}. Country lookups will be disabled.")
+            country_cache = {}
+
     # Pre-convert DataFrame to dict for better performance
     records = df.to_dict('records')
 
     for index, row_data in enumerate(records, 1):
-        result = process_single_import(client, index, row_data, field_mapping, import_type)
+        result = process_single_import(client, index, row_data, field_mapping, import_type, country_cache)
 
         if result['success']:
             successful.append(result['result'])
@@ -637,7 +712,7 @@ def match_person_by_identifier(client: PooolAPIClient, identifier_field: str, id
 
 
 def process_single_update(client: PooolAPIClient, index: int, row_data: Dict, field_mapping: Dict,
-                         identifier_field: str, update_type: str, dry_run: bool = False) -> Dict:
+                         identifier_field: str, update_type: str, dry_run: bool = False, country_cache: Optional[Dict[str, int]] = None) -> Dict:
     """
     Process a single row update for companies or persons.
     Returns: Dict with success status and details
@@ -672,7 +747,7 @@ def process_single_update(client: PooolAPIClient, index: int, row_data: Dict, fi
             # Prepare company data if any company fields exist
             if company_fields:
                 prepared_company_data = prepare_company_data(clean_data,
-                    {k: v for k, v in field_mapping.items() if v in company_fields})
+                    {k: v for k, v in field_mapping.items() if v in company_fields}, client, country_cache)
             else:
                 prepared_company_data = {}
 
@@ -812,11 +887,17 @@ def bulk_update_companies(api_key: str, df, field_mapping: Dict, identifier_fiel
     successful = []
     failed = []
 
+    # Initialize country cache for address country lookups
+    country_cache, error = client.get_all_countries()
+    if error:
+        print(f"Warning: Could not fetch countries: {error}. Country lookups will be disabled.")
+        country_cache = {}
+
     # Pre-convert DataFrame to dict for better performance
     records = df.to_dict('records')
 
     for index, row_data in enumerate(records, 1):
-        result = process_single_update(client, index, row_data, field_mapping, identifier_field, 'companies', dry_run)
+        result = process_single_update(client, index, row_data, field_mapping, identifier_field, 'companies', dry_run, country_cache)
 
         if result['success']:
             successful.append(result['result'])
@@ -930,7 +1011,7 @@ def bulk_update_persons(api_key: str, df, field_mapping: Dict, identifier_field:
     records = df.to_dict('records')
 
     for index, row_data in enumerate(records, 1):
-        result = process_single_update(client, index, row_data, field_mapping, identifier_field, 'persons', dry_run)
+        result = process_single_update(client, index, row_data, field_mapping, identifier_field, 'persons', dry_run, None)
 
         if result['success']:
             successful.append(result['result'])
