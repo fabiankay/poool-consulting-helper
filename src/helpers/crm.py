@@ -143,7 +143,7 @@ def _add_complex_fields_to_company(company_data: Dict, complex_fields: Dict) -> 
 
     # Create address if any address fields exist
     if any(address_data.values()):
-        address = {"is_preferred": True, "pos": 1, "country_id": 1}
+        address = {"is_preferred": True, "pos": 1, "country_id": 434}
         address.update({k: v for k, v in address_data.items() if v})
         addresses.append(address)
 
