@@ -549,8 +549,8 @@ def _execute_import_with_progress(import_type: str, row_count: int):
                 st.session_state.crm_api_key,
                 st.session_state.uploaded_data,
                 st.session_state.field_mapping,
-                st.session_state.get('environment', 'production'),
-                st.session_state.get('custom_url'),
+                st.session_state.get('crm_environment', 'production'),
+                st.session_state.get('crm_custom_url'),
                 st.session_state.get('final_tag_mappings', {})
             )
         else:
@@ -560,8 +560,8 @@ def _execute_import_with_progress(import_type: str, row_count: int):
                 st.session_state.crm_api_key,
                 st.session_state.uploaded_data,
                 st.session_state.field_mapping,
-                st.session_state.get('environment', 'production'),
-                st.session_state.get('custom_url'),
+                st.session_state.get('crm_environment', 'production'),
+                st.session_state.get('crm_custom_url'),
                 st.session_state.get('final_tag_mappings', {})
             )
 

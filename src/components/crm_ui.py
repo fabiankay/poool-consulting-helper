@@ -280,8 +280,8 @@ def render_preview_matches(df: pd.DataFrame, field_mapping: dict, identifier_fie
     with col2:
         if st.button("🔍 Vorschau Übereinstimmungen", type="secondary"):
             with st.spinner("Vorschau der ersten 20 Übereinstimmungen..."):
-                current_env = st.session_state.get('environment', 'production')
-                custom_url = st.session_state.get('custom_url') if current_env == 'custom' else None
+                current_env = st.session_state.get('crm_environment', 'production')
+                custom_url = st.session_state.get('crm_custom_url') if current_env == 'custom' else None
 
                 preview_results = preview_function(
                     st.session_state.crm_api_key,
@@ -366,8 +366,8 @@ def render_update_execution(df: pd.DataFrame, field_mapping: dict, identifier_fi
             spinner_text = f"Simuliere Aktualisierungen für {row_count:,} {entity_type}..." if dry_run_mode else f"Aktualisiere {row_count:,} {entity_type}..."
 
             with st.spinner(spinner_text):
-                current_env = st.session_state.get('environment', 'production')
-                custom_url = st.session_state.get('custom_url') if current_env == 'custom' else None
+                current_env = st.session_state.get('crm_environment', 'production')
+                custom_url = st.session_state.get('crm_custom_url') if current_env == 'custom' else None
 
                 successful, failed = bulk_update_function(
                     st.session_state.crm_api_key,
