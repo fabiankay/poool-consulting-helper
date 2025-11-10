@@ -13,13 +13,13 @@ from src.helpers.personio import (
 
 # Page configuration
 st.set_page_config(
-    page_title="Personio API Query Tool",
+    page_title="Personio API-Abfrage-Tool",
     page_icon="🧑‍💻",
     layout="wide"
 )
 
-st.title("🧑‍💻 Personio API Query Tool")
-st.markdown("Enter your Personio API credentials to authenticate and retrieve employee data, absences, and attendances.")
+st.title("🧑‍💻 Personio API-Abfrage-Tool")
+st.markdown("Geben Sie Ihre Personio API-Zugangsdaten ein, um sich zu authentifizieren und Mitarbeiterdaten, Abwesenheiten und Anwesenheiten abzurufen.")
 
 # Initialize session state
 if 'personio_client' not in st.session_state:
@@ -56,39 +56,39 @@ def create_excel_download(df):
 
 # API Credentials Section (Shared across all tabs)
 st.markdown("---")
-st.subheader("🔑 API Authentication")
+st.subheader("🔑 API-Authentifizierung")
 
 col1, col2, col3 = st.columns([2, 2, 1])
 
 with col1:
     client_id = st.text_input(
-        "Client ID",
+        "Client-ID",
         type="default",
-        help="Your Personio API Client ID"
+        help="Ihre Personio API Client-ID"
     )
 
 with col2:
     client_secret = st.text_input(
-        "Client Secret",
+        "Client-Secret",
         type="password",
-        help="Your Personio API Client Secret"
+        help="Ihr Personio API Client-Secret"
     )
 
 with col3:
     st.write("")  # Spacing
     st.write("")  # Spacing
-    if st.button("🔓 Authenticate", type="primary", use_container_width=True):
+    if st.button("🔓 Authentifizieren", type="primary", use_container_width=True):
         if not client_id or not client_secret:
-            st.error("Please enter both Client ID and Client Secret")
+            st.error("Bitte geben Sie sowohl Client-ID als auch Client-Secret ein")
         else:
-            with st.spinner("Authenticating..."):
+            with st.spinner("Authentifiziere..."):
                 client = create_personio_client(client_id, client_secret)
 
                 if not client:
-                    st.error("Authentication failed: Invalid credentials or API error")
+                    st.error("Authentifizierung fehlgeschlagen: Ungültige Zugangsdaten oder API-Fehler")
                 else:
                     st.session_state.personio_client = client
-                    st.success("✅ Authentication successful!")
+                    st.success("✅ Authentifizierung erfolgreich!")
                     st.rerun()
 
 # Client status
@@ -96,7 +96,7 @@ if st.session_state.personio_client:
     if is_client_valid():
         time_left = st.session_state.personio_client.token_expires_at - datetime.now()
         minutes_left = int(time_left.total_seconds() / 60)
-        st.success(f"🟢 Token is valid (expires in {minutes_left} minutes)")
+        st.success(f"🟢 Token ist gültig (läuft in {minutes_left} Minuten ab)")
     else:
         st.error("🔴 Token has expired - please re-authenticate")
         st.session_state.personio_client = None
@@ -105,23 +105,23 @@ st.markdown("---")
 
 # Main Tabs
 if st.session_state.personio_client and is_client_valid():
-    tab1, tab2, tab3 = st.tabs(["👥 Employees", "🏖️ Absences", "⏰ Attendances"])
+    tab1, tab2, tab3 = st.tabs(["👥 Mitarbeiter", "🏖️ Abwesenheiten", "⏰ Anwesenheiten"])
 
     # ========== TAB 1: EMPLOYEES ==========
     with tab1:
-        st.markdown("### Employee Data")
+        st.markdown("### Mitarbeiterdaten")
 
-        if st.button("📥 Fetch Employees", type="secondary", key="fetch_employees"):
-            with st.spinner("Fetching employee data..."):
+        if st.button("📥 Mitarbeiter abrufen", type="secondary", key="fetch_employees"):
+            with st.spinner("Hole Mitarbeiterdaten..."):
                 employees_data, error = get_employees(st.session_state.personio_client)
 
                 if error:
-                    st.error(f"Failed to fetch employees: {error}")
+                    st.error(f"Fehler beim Abrufen der Mitarbeiter: {error}")
                 else:
                     df, column_mapping, process_error = process_employees_data(employees_data)
 
                     if process_error:
-                        st.error(f"Failed to process employee data: {process_error}")
+                        st.error(f"Fehler beim Verarbeiten der Mitarbeiterdaten: {process_error}")
                     else:
                         st.session_state.employees_df = df
                         st.session_state.employees_column_mapping = column_mapping
@@ -129,13 +129,13 @@ if st.session_state.personio_client and is_client_valid():
 
         if st.session_state.employees_df is not None:
             # Column mapping info
-            with st.expander("📋 Column Mapping", expanded=False):
-                st.write("This table shows the mapping of API fields to DataFrame columns:")
+            with st.expander("📋 Spaltenzuordnung", expanded=False):
+                st.write("Diese Tabelle zeigt die Zuordnung von API-Feldern zu DataFrame-Spalten:")
                 mapping_df = pd.DataFrame.from_dict(
                     st.session_state.employees_column_mapping,
                     orient='index',
-                    columns=['DataFrame Column']
-                ).reset_index().rename(columns={'index': 'API Field'})
+                    columns=['DataFrame-Spalte']
+                ).reset_index().rename(columns={'index': 'API-Feld'})
 
                 # Count not null and not empty values per column in mapping
                 not_null_not_empty = []
@@ -155,19 +155,19 @@ if st.session_state.personio_client and is_client_valid():
                         not_null_not_empty.append(0)
                         null_or_empty.append(0)
 
-                mapping_df['Not Null & Not Empty Count'] = not_null_not_empty
-                mapping_df['Null or Empty Count'] = null_or_empty
+                mapping_df['Nicht-leer Anzahl'] = not_null_not_empty
+                mapping_df['Leer Anzahl'] = null_or_empty
                 st.dataframe(mapping_df, use_container_width=True, hide_index=True)
 
             # Display metrics
-            st.markdown("#### 📊 Data Overview")
+            st.markdown("#### 📊 Datenübersicht")
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.metric("Total Employees", len(st.session_state.employees_df))
+                st.metric("Mitarbeiter gesamt", len(st.session_state.employees_df))
             with col2:
-                st.metric("Total Attributes", len(st.session_state.employees_df.columns))
+                st.metric("Attribute gesamt", len(st.session_state.employees_df.columns))
             with col3:
-                st.metric("Data Size", f"{st.session_state.employees_df.memory_usage(deep=True).sum() / 1024:.1f} KB")
+                st.metric("Datengröße", f"{st.session_state.employees_df.memory_usage(deep=True).sum() / 1024:.1f} KB")
 
             # Display the DataFrame
             st.dataframe(
@@ -177,13 +177,13 @@ if st.session_state.personio_client and is_client_valid():
             )
 
             # Download options
-            st.markdown("#### 💾 Download Options")
+            st.markdown("#### 💾 Download-Optionen")
             col1, col2 = st.columns(2)
 
             with col1:
                 csv = st.session_state.employees_df.to_csv(index=False)
                 st.download_button(
-                    label="📄 Download as CSV",
+                    label="📄 Als CSV herunterladen",
                     data=csv,
                     file_name=f"personio_employees_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
                     mime="text/csv"
@@ -192,7 +192,7 @@ if st.session_state.personio_client and is_client_valid():
             with col2:
                 excel_data = create_excel_download(st.session_state.employees_df)
                 st.download_button(
-                    label="📊 Download as Excel",
+                    label="📊 Als Excel herunterladen",
                     data=excel_data,
                     file_name=f"personio_employees_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -200,29 +200,29 @@ if st.session_state.personio_client and is_client_valid():
 
     # ========== TAB 2: ABSENCES ==========
     with tab2:
-        st.markdown("### Absence Data")
+        st.markdown("### Abwesenheitsdaten")
 
         # Date range filters
         col1, col2 = st.columns(2)
         with col1:
             start_date = st.date_input(
-                "Start Date (Optional)",
+                "Startdatum (Optional)",
                 value=None,
-                help="Filter absences starting from this date"
+                help="Abwesenheiten ab diesem Datum filtern"
             )
         with col2:
             end_date = st.date_input(
-                "End Date (Optional)",
+                "Enddatum (Optional)",
                 value=None,
-                help="Filter absences until this date"
+                help="Abwesenheiten bis zu diesem Datum filtern"
             )
 
         # Format dates for API
         start_date_str = start_date.strftime('%Y-%m-%d') if start_date else None
         end_date_str = end_date.strftime('%Y-%m-%d') if end_date else None
 
-        if st.button("📥 Fetch Absences", type="secondary", key="fetch_absences"):
-            with st.spinner("Fetching absence data..."):
+        if st.button("📥 Abwesenheiten abrufen", type="secondary", key="fetch_absences"):
+            with st.spinner("Hole Abwesenheitsdaten..."):
                 absences_data, error = get_absences(
                     st.session_state.personio_client,
                     start_date=start_date_str,
@@ -230,12 +230,12 @@ if st.session_state.personio_client and is_client_valid():
                 )
 
                 if error:
-                    st.error(f"Failed to fetch absences: {error}")
+                    st.error(f"Fehler beim Abrufen der Abwesenheiten: {error}")
                 else:
                     df, column_mapping, process_error = process_absences_data(absences_data)
 
                     if process_error:
-                        st.error(f"Failed to process absence data: {process_error}")
+                        st.error(f"Fehler beim Verarbeiten der Abwesenheitsdaten: {process_error}")
                     else:
                         st.session_state.absences_df = df
                         st.session_state.absences_column_mapping = column_mapping
@@ -243,13 +243,13 @@ if st.session_state.personio_client and is_client_valid():
 
         if st.session_state.absences_df is not None:
             # Column mapping info
-            with st.expander("📋 Column Mapping", expanded=False):
-                st.write("This table shows the mapping of API fields to DataFrame columns:")
+            with st.expander("📋 Spaltenzuordnung", expanded=False):
+                st.write("Diese Tabelle zeigt die Zuordnung von API-Feldern zu DataFrame-Spalten:")
                 mapping_df = pd.DataFrame.from_dict(
                     st.session_state.absences_column_mapping,
                     orient='index',
-                    columns=['DataFrame Column']
-                ).reset_index().rename(columns={'index': 'API Field'})
+                    columns=['DataFrame-Spalte']
+                ).reset_index().rename(columns={'index': 'API-Feld'})
 
                 # Count not null and not empty values per column in mapping
                 not_null_not_empty = []
@@ -269,19 +269,19 @@ if st.session_state.personio_client and is_client_valid():
                         not_null_not_empty.append(0)
                         null_or_empty.append(0)
 
-                mapping_df['Not Null & Not Empty Count'] = not_null_not_empty
-                mapping_df['Null or Empty Count'] = null_or_empty
+                mapping_df['Nicht-leer Anzahl'] = not_null_not_empty
+                mapping_df['Leer Anzahl'] = null_or_empty
                 st.dataframe(mapping_df, use_container_width=True, hide_index=True)
 
             # Display metrics
-            st.markdown("#### 📊 Data Overview")
+            st.markdown("#### 📊 Datenübersicht")
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.metric("Total Absences", len(st.session_state.absences_df))
+                st.metric("Abwesenheiten gesamt", len(st.session_state.absences_df))
             with col2:
-                st.metric("Total Attributes", len(st.session_state.absences_df.columns))
+                st.metric("Attribute gesamt", len(st.session_state.absences_df.columns))
             with col3:
-                st.metric("Data Size", f"{st.session_state.absences_df.memory_usage(deep=True).sum() / 1024:.1f} KB")
+                st.metric("Datengröße", f"{st.session_state.absences_df.memory_usage(deep=True).sum() / 1024:.1f} KB")
 
             # Display the DataFrame
             st.dataframe(
@@ -291,13 +291,13 @@ if st.session_state.personio_client and is_client_valid():
             )
 
             # Download options
-            st.markdown("#### 💾 Download Options")
+            st.markdown("#### 💾 Download-Optionen")
             col1, col2 = st.columns(2)
 
             with col1:
                 csv = st.session_state.absences_df.to_csv(index=False)
                 st.download_button(
-                    label="📄 Download as CSV",
+                    label="📄 Als CSV herunterladen",
                     data=csv,
                     file_name=f"personio_absences_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
                     mime="text/csv",
@@ -307,7 +307,7 @@ if st.session_state.personio_client and is_client_valid():
             with col2:
                 excel_data = create_excel_download(st.session_state.absences_df)
                 st.download_button(
-                    label="📊 Download as Excel",
+                    label="📊 Als Excel herunterladen",
                     data=excel_data,
                     file_name=f"personio_absences_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -316,22 +316,22 @@ if st.session_state.personio_client and is_client_valid():
 
     # ========== TAB 3: ATTENDANCES ==========
     with tab3:
-        st.markdown("### Attendance Data")
+        st.markdown("### Anwesenheitsdaten")
 
         # Date range filters
         col1, col2 = st.columns(2)
         with col1:
             att_start_date = st.date_input(
-                "Start Date (Optional)",
+                "Startdatum (Optional)",
                 value=None,
-                help="Filter attendances starting from this date",
+                help="Anwesenheiten ab diesem Datum filtern",
                 key="att_start_date"
             )
         with col2:
             att_end_date = st.date_input(
-                "End Date (Optional)",
+                "Enddatum (Optional)",
                 value=None,
-                help="Filter attendances until this date",
+                help="Anwesenheiten bis zu diesem Datum filtern",
                 key="att_end_date"
             )
 
@@ -339,8 +339,8 @@ if st.session_state.personio_client and is_client_valid():
         att_start_date_str = att_start_date.strftime('%Y-%m-%d') if att_start_date else None
         att_end_date_str = att_end_date.strftime('%Y-%m-%d') if att_end_date else None
 
-        if st.button("📥 Fetch Attendances", type="secondary", key="fetch_attendances"):
-            with st.spinner("Fetching attendance data..."):
+        if st.button("📥 Anwesenheiten abrufen", type="secondary", key="fetch_attendances"):
+            with st.spinner("Hole Anwesenheitsdaten..."):
                 attendances_data, error = get_attendances(
                     st.session_state.personio_client,
                     start_date=att_start_date_str,
@@ -348,12 +348,12 @@ if st.session_state.personio_client and is_client_valid():
                 )
 
                 if error:
-                    st.error(f"Failed to fetch attendances: {error}")
+                    st.error(f"Fehler beim Abrufen der Anwesenheiten: {error}")
                 else:
                     df, column_mapping, process_error = process_attendances_data(attendances_data)
 
                     if process_error:
-                        st.error(f"Failed to process attendance data: {process_error}")
+                        st.error(f"Fehler beim Verarbeiten der Anwesenheitsdaten: {process_error}")
                     else:
                         st.session_state.attendances_df = df
                         st.session_state.attendances_column_mapping = column_mapping
@@ -361,13 +361,13 @@ if st.session_state.personio_client and is_client_valid():
 
         if st.session_state.attendances_df is not None:
             # Column mapping info
-            with st.expander("📋 Column Mapping", expanded=False):
-                st.write("This table shows the mapping of API fields to DataFrame columns:")
+            with st.expander("📋 Spaltenzuordnung", expanded=False):
+                st.write("Diese Tabelle zeigt die Zuordnung von API-Feldern zu DataFrame-Spalten:")
                 mapping_df = pd.DataFrame.from_dict(
                     st.session_state.attendances_column_mapping,
                     orient='index',
-                    columns=['DataFrame Column']
-                ).reset_index().rename(columns={'index': 'API Field'})
+                    columns=['DataFrame-Spalte']
+                ).reset_index().rename(columns={'index': 'API-Feld'})
 
                 # Count not null and not empty values per column in mapping
                 not_null_not_empty = []
@@ -387,19 +387,19 @@ if st.session_state.personio_client and is_client_valid():
                         not_null_not_empty.append(0)
                         null_or_empty.append(0)
 
-                mapping_df['Not Null & Not Empty Count'] = not_null_not_empty
-                mapping_df['Null or Empty Count'] = null_or_empty
+                mapping_df['Nicht-leer Anzahl'] = not_null_not_empty
+                mapping_df['Leer Anzahl'] = null_or_empty
                 st.dataframe(mapping_df, use_container_width=True, hide_index=True)
 
             # Display metrics
-            st.markdown("#### 📊 Data Overview")
+            st.markdown("#### 📊 Datenübersicht")
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.metric("Total Attendances", len(st.session_state.attendances_df))
+                st.metric("Anwesenheiten gesamt", len(st.session_state.attendances_df))
             with col2:
-                st.metric("Total Attributes", len(st.session_state.attendances_df.columns))
+                st.metric("Attribute gesamt", len(st.session_state.attendances_df.columns))
             with col3:
-                st.metric("Data Size", f"{st.session_state.attendances_df.memory_usage(deep=True).sum() / 1024:.1f} KB")
+                st.metric("Datengröße", f"{st.session_state.attendances_df.memory_usage(deep=True).sum() / 1024:.1f} KB")
 
             # Display the DataFrame
             st.dataframe(
@@ -409,13 +409,13 @@ if st.session_state.personio_client and is_client_valid():
             )
 
             # Download options
-            st.markdown("#### 💾 Download Options")
+            st.markdown("#### 💾 Download-Optionen")
             col1, col2 = st.columns(2)
 
             with col1:
                 csv = st.session_state.attendances_df.to_csv(index=False)
                 st.download_button(
-                    label="📄 Download as CSV",
+                    label="📄 Als CSV herunterladen",
                     data=csv,
                     file_name=f"personio_attendances_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
                     mime="text/csv",
@@ -425,7 +425,7 @@ if st.session_state.personio_client and is_client_valid():
             with col2:
                 excel_data = create_excel_download(st.session_state.attendances_df)
                 st.download_button(
-                    label="📊 Download as Excel",
+                    label="📊 Als Excel herunterladen",
                     data=excel_data,
                     file_name=f"personio_attendances_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -433,8 +433,8 @@ if st.session_state.personio_client and is_client_valid():
                 )
 
 else:
-    st.info("🔐 Please authenticate with your Personio API credentials to access employee, absence, and attendance data.")
+    st.info("🔐 Bitte authentifizieren Sie sich mit Ihren Personio API-Zugangsdaten, um auf Mitarbeiter-, Abwesenheits- und Anwesenheitsdaten zuzugreifen.")
 
 # Footer
 st.markdown("---")
-st.markdown("💡 **Tip:** Keep API credentials secure and don't share them with others.")
+st.markdown("💡 **Tipp:** Bewahren Sie API-Zugangsdaten sicher auf und teilen Sie diese nicht mit anderen.")

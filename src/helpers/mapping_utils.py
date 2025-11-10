@@ -75,7 +75,7 @@ def import_mapping_from_json(json_content: str, csv_columns: List[str]) -> Tuple
 
         # Validate JSON structure
         if not isinstance(mapping_config, dict):
-            return imported_config, ["Error: JSON must be an object/dictionary"]
+            return imported_config, ["Fehler: JSON muss ein Objekt/Dictionary sein"]
 
         # Get available CSV columns (excluding empty string)
         available_columns = set(csv_columns) - {''}
@@ -95,10 +95,10 @@ def import_mapping_from_json(json_content: str, csv_columns: List[str]) -> Tuple
             imported_config['field_mapping'] = matched_mappings
 
             if matched_mappings:
-                messages.append(f"Success: Imported {len(matched_mappings)} field mappings")
+                messages.append(f"Erfolg: {len(matched_mappings)} Feldzuordnungen importiert")
 
             if missing_columns:
-                messages.append(f"Warning: {len(missing_columns)} columns from JSON not found in CSV: {', '.join(missing_columns[:5])}")
+                messages.append(f"Warnung: {len(missing_columns)} Spalten aus JSON nicht in CSV gefunden: {', '.join(missing_columns[:5])}")
 
         # Import tag mappings
         if 'final_tag_mappings' in mapping_config:
@@ -115,19 +115,19 @@ def import_mapping_from_json(json_content: str, csv_columns: List[str]) -> Tuple
             imported_config['final_tag_mappings'] = matched_tag_mappings
 
             if matched_tag_mappings:
-                messages.append(f"Success: Imported {len(matched_tag_mappings)} tag mappings")
+                messages.append(f"Erfolg: {len(matched_tag_mappings)} Tag-Zuordnungen importiert")
 
             if missing_tag_columns:
-                messages.append(f"Warning: {len(missing_tag_columns)} tag columns from JSON not found in CSV")
+                messages.append(f"Warnung: {len(missing_tag_columns)} Tag-Spalten aus JSON nicht in CSV gefunden")
 
         # Import manual tag mappings
         if 'manual_tag_mappings' in mapping_config:
             imported_config['manual_tag_mappings'] = mapping_config['manual_tag_mappings']
-            messages.append(f"Success: Imported manual tag mappings")
+            messages.append(f"Erfolg: Manuelle Tag-Zuordnungen importiert")
 
         return imported_config, messages
 
     except json.JSONDecodeError as e:
-        return imported_config, [f"Error: Invalid JSON format - {str(e)}"]
+        return imported_config, [f"Fehler: Ungültiges JSON-Format - {str(e)}"]
     except Exception as e:
-        return imported_config, [f"Error: Failed to import mapping - {str(e)}"]
+        return imported_config, [f"Fehler: Import der Zuordnung fehlgeschlagen - {str(e)}"]

@@ -76,7 +76,7 @@ def process_employees_data(employees_data):
     """Convert employees data to pandas DataFrame with improved complex attribute handling"""
     try:
         if 'data' not in employees_data:
-            return None, None, "No 'data' field found in API response"
+            return None, None, "Kein 'data'-Feld in API-Antwort gefunden"
 
         employees = employees_data['data']
         if not employees:
@@ -102,7 +102,7 @@ def process_employees_data(employees_data):
         return df, column_mapping, None
 
     except Exception as e:
-        return None, None, f"Error processing employee data: {str(e)}"
+        return None, None, f"Fehler beim Verarbeiten der Mitarbeiterdaten: {str(e)}"
 
 
 def process_absences_data(absences_data):
@@ -116,7 +116,7 @@ def process_absences_data(absences_data):
     """
     try:
         if 'data' not in absences_data:
-            return None, None, "No 'data' field found in API response"
+            return None, None, "Kein 'data'-Feld in API-Antwort gefunden"
 
         absences = absences_data['data']
         if not absences:
@@ -142,7 +142,7 @@ def process_absences_data(absences_data):
         return df, column_mapping, None
 
     except Exception as e:
-        return None, None, f"Error processing absences data: {str(e)}"
+        return None, None, f"Fehler beim Verarbeiten der Abwesenheitsdaten: {str(e)}"
 
 
 def process_attendances_data(attendances_data):
@@ -156,7 +156,7 @@ def process_attendances_data(attendances_data):
     """
     try:
         if 'data' not in attendances_data:
-            return None, None, "No 'data' field found in API response"
+            return None, None, "Kein 'data'-Feld in API-Antwort gefunden"
 
         attendances = attendances_data['data']
         if not attendances:
@@ -182,7 +182,7 @@ def process_attendances_data(attendances_data):
         return df, column_mapping, None
 
     except Exception as e:
-        return None, None, f"Error processing attendances data: {str(e)}"
+        return None, None, f"Fehler beim Verarbeiten der Anwesenheitsdaten: {str(e)}"
 
 
 def process_attribute(key, value, path_prefix=""):

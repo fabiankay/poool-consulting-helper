@@ -70,9 +70,9 @@ class PersonioAPIClient:
             return access_token, expires_at, None
 
         except requests.exceptions.RequestException as e:
-            return None, None, f"API request failed: {str(e)}"
+            return None, None, f"API-Anfrage fehlgeschlagen: {str(e)}"
         except Exception as e:
-            return None, None, f"Unexpected error: {str(e)}"
+            return None, None, f"Unerwarteter Fehler: {str(e)}"
 
     def is_token_valid(self) -> bool:
         """Check if the current access token is still valid."""
@@ -105,7 +105,7 @@ class PersonioAPIClient:
             Tuple of (all_records, error)
         """
         if not self.is_token_valid():
-            return None, "Token is invalid or expired. Please authenticate first."
+            return None, "Token ist ungültig oder abgelaufen. Bitte authentifizieren Sie sich zuerst."
 
         url = f"{self.API_V1_URL}{endpoint}"
         headers = self._get_headers()
@@ -141,9 +141,9 @@ class PersonioAPIClient:
             return all_records, None
 
         except requests.exceptions.RequestException as e:
-            return None, f"API request failed: {str(e)}"
+            return None, f"API-Anfrage fehlgeschlagen: {str(e)}"
         except Exception as e:
-            return None, f"Unexpected error: {str(e)}"
+            return None, f"Unerwarteter Fehler: {str(e)}"
 
     def get_employees(self) -> Tuple[Optional[Dict], Optional[str]]:
         """
