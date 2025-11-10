@@ -16,13 +16,13 @@ from src.helpers.mapping_utils import (
 from src.components.crm_ui import render_environment_selector, render_api_configuration, render_wip_warning
 
 st.set_page_config(
-    page_title="CRM Import Tool",
+    page_title="CRM Import",
     page_icon="📥",
     layout="wide"
 )
 
-st.title("📥 CRM Import Tool")
-st.markdown("Upload CSV/Excel files to create companies and contacts in Poool CRM via API")
+st.title("📥 CRM Import")
+st.markdown("CSV/Excel-Dateien hochladen, um Firmen und Kontakte im Poool CRM über die API zu erstellen")
 
 render_wip_warning()
 
@@ -150,11 +150,11 @@ def _show_relationship_preview(csv_columns: list):
         supplier_col = get_current_mapping_for_field('is_supplier', st.session_state.field_mapping)
 
         if client_col or supplier_col:
-            st.markdown("**Relationship Preview** 🔍")
+            st.markdown("**Beziehungsvorschau** 🔍")
 
             total_rows = len(st.session_state.uploaded_data)
             if total_rows > 5000:
-                st.caption(f"📊 Large dataset ({total_rows:,} rows). Preview shows first 3 rows only.")
+                st.caption(f"📊 Großer Datensatz ({total_rows:,} Zeilen). Vorschau zeigt nur die ersten 3 Zeilen.")
 
             preview_data = []
             sample_rows = st.session_state.uploaded_data.head(3)
@@ -177,16 +177,16 @@ def _show_relationship_preview(csv_columns: list):
                         supplier_status = "✅"
 
                 preview_data.append({
-                    "Company": company_name[:20] + "..." if len(str(company_name)) > 20 else company_name,
-                    "Client": client_status,
-                    "Supplier": supplier_status
+                    "Firma": company_name[:20] + "..." if len(str(company_name)) > 20 else company_name,
+                    "Kunde": client_status,
+                    "Lieferant": supplier_status
                 })
 
             if preview_data:
                 preview_df = pd.DataFrame(preview_data)
                 st.dataframe(preview_df, use_container_width=True, hide_index=True)
         else:
-            st.info("💡 Map relationship columns to see preview")
+            st.info("💡 Ordnen Sie Beziehungsspalten zu, um die Vorschau zu sehen")
 
 def _show_client_preview(csv_columns: list):
     """Show a preview of detected client relationships based on current mapping."""
@@ -194,7 +194,7 @@ def _show_client_preview(csv_columns: list):
         client_col = get_current_mapping_for_field('is_client', st.session_state.field_mapping)
 
         if client_col:
-            st.markdown("**Client Preview** 💼")
+            st.markdown("**Kundenvorschau** 💼")
 
             preview_data = []
             sample_rows = st.session_state.uploaded_data.head(3)
@@ -213,18 +213,18 @@ def _show_client_preview(csv_columns: list):
 
                 if is_client:
                     preview_data.append({
-                        "Client": company_name[:25] + "..." if len(str(company_name)) > 25 else company_name,
-                        "Status": "✅ Active Client"
+                        "Kunde": company_name[:25] + "..." if len(str(company_name)) > 25 else company_name,
+                        "Status": "✅ Aktiver Kunde"
                     })
 
             if preview_data:
                 preview_df = pd.DataFrame(preview_data)
                 st.dataframe(preview_df, use_container_width=True, hide_index=True)
-                st.info(f"📊 Found {client_count} clients in sample data")
+                st.info(f"📊 {client_count} Kunden in Beispieldaten gefunden")
             else:
-                st.warning("No clients detected in sample data")
+                st.warning("Keine Kunden in Beispieldaten erkannt")
         else:
-            st.info("💡 Map 'is_client' column to see preview")
+            st.info("💡 Ordnen Sie die 'is_client'-Spalte zu, um die Vorschau zu sehen")
 
 def _show_supplier_preview(csv_columns: list):
     """Show a preview of detected supplier relationships based on current mapping."""
@@ -232,7 +232,7 @@ def _show_supplier_preview(csv_columns: list):
         supplier_col = get_current_mapping_for_field('is_supplier', st.session_state.field_mapping)
 
         if supplier_col:
-            st.markdown("**Supplier Preview** 🏭")
+            st.markdown("**Lieferantenvorschau** 🏭")
 
             preview_data = []
             sample_rows = st.session_state.uploaded_data.head(3)
@@ -251,18 +251,18 @@ def _show_supplier_preview(csv_columns: list):
 
                 if is_supplier:
                     preview_data.append({
-                        "Supplier": company_name[:25] + "..." if len(str(company_name)) > 25 else company_name,
-                        "Status": "✅ Active Supplier"
+                        "Lieferant": company_name[:25] + "..." if len(str(company_name)) > 25 else company_name,
+                        "Status": "✅ Aktiver Lieferant"
                     })
 
             if preview_data:
                 preview_df = pd.DataFrame(preview_data)
                 st.dataframe(preview_df, use_container_width=True, hide_index=True)
-                st.info(f"📊 Found {supplier_count} suppliers in sample data")
+                st.info(f"📊 {supplier_count} Lieferanten in Beispieldaten gefunden")
             else:
-                st.warning("No suppliers detected in sample data")
+                st.warning("Keine Lieferanten in Beispieldaten erkannt")
         else:
-            st.info("💡 Map 'is_supplier' column to see preview")
+            st.info("💡 Ordnen Sie die 'is_supplier'-Spalte zu, um die Vorschau zu sehen")
 
 def _render_field_mapping_section(required_fields: list, optional_fields: list, csv_columns: list):
     """Render the complete field mapping section with organized tabs for different field categories."""
@@ -282,23 +282,23 @@ def _render_field_mapping_section(required_fields: list, optional_fields: list, 
             basic_fields.append(field)
 
     # Create tabs for different field categories
-    tab1, tab2, tab3, tab4 = st.tabs(["📋 Basic Info", "💼 Client Settings", "🏭 Supplier Settings", "🏷️ Tag Management"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📋 Basisinformationen", "💼 Kundeneinstellungen", "🏭 Lieferanteneinstellungen", "🏷️ Tag-Verwaltung"])
 
     with tab1:
         col1, col2 = st.columns([1, 1])
         with col1:
-            st.markdown("**Required Fields** ⭐")
+            st.markdown("**Pflichtfelder** ⭐")
             for field in required_fields:
                 _render_field_mapping_selectbox(field, csv_columns, "required")
 
         with col2:
-            st.markdown("**Optional Company Info**")
+            st.markdown("**Optionale Firmeninformationen**")
             for field in basic_fields:
                 _render_field_mapping_selectbox(field, csv_columns, "basic_optional")
 
     with tab2:
-        st.markdown("**Client Relationship Configuration** 💼")
-        st.info("💡 Configure fields for companies that are your **clients** (they pay you for services)")
+        st.markdown("**Kundenbeziehungs-Konfiguration** 💼")
+        st.info("💡 Konfigurieren Sie Felder für Firmen, die Ihre **Kunden** sind (sie bezahlen Sie für Dienstleistungen)")
 
         # Show relationship toggle and preview
         col1, col2 = st.columns([1, 1])
@@ -313,11 +313,11 @@ def _render_field_mapping_section(required_fields: list, optional_fields: list, 
             _show_client_preview(csv_columns)
 
         # Client-specific configuration fields
-        st.markdown("**Client Business Settings**")
+        st.markdown("**Kunden-Geschäftseinstellungen**")
         col1, col2 = st.columns([1, 1])
 
         with col1:
-            st.markdown("*Payment & Invoicing*")
+            st.markdown("*Zahlung & Rechnungsstellung*")
             payment_fields = ['customer_number', 'payment_time_day_num', 'send_bill_to_email_to',
                             'reference_number_required', 'dunning_blocked']
             for field in payment_fields:
@@ -325,15 +325,15 @@ def _render_field_mapping_section(required_fields: list, optional_fields: list, 
                     _render_field_mapping_selectbox(field, csv_columns, "client_payment")
 
         with col2:
-            st.markdown("*Accounting & Compliance*")
+            st.markdown("*Buchhaltung & Compliance*")
             accounting_fields = ['comment_client', 'datev_account', 'leitweg_id', 'datev_is_client_collection']
             for field in accounting_fields:
                 if field in client_fields:
                     _render_field_mapping_selectbox(field, csv_columns, "client_accounting")
 
     with tab3:
-        st.markdown("**Supplier Relationship Configuration** 🏭")
-        st.info("💡 Configure fields for companies that are your **suppliers** (you pay them for services/goods)")
+        st.markdown("**Lieferantenbeziehungs-Konfiguration** 🏭")
+        st.info("💡 Konfigurieren Sie Felder für Firmen, die Ihre **Lieferanten** sind (Sie bezahlen sie für Dienstleistungen/Waren)")
 
         # Show relationship toggle and preview
         col1, col2 = st.columns([1, 1])
@@ -348,51 +348,51 @@ def _render_field_mapping_section(required_fields: list, optional_fields: list, 
             _show_supplier_preview(csv_columns)
 
         # Supplier-specific configuration fields
-        st.markdown("**Supplier Business Settings**")
+        st.markdown("**Lieferanten-Geschäftseinstellungen**")
         col1, col2 = st.columns([1, 1])
 
         with col1:
-            st.markdown("*Payment Terms*")
+            st.markdown("*Zahlungsbedingungen*")
             for field in ['discount_day_num', 'discount_percentage']:
                 if field in supplier_fields:
                     _render_field_mapping_selectbox(field, csv_columns, "supplier_payment")
 
         with col2:
-            st.markdown("*Notes & Comments*")
+            st.markdown("*Notizen & Kommentare*")
             for field in ['comment_supplier']:
                 if field in supplier_fields:
                     _render_field_mapping_selectbox(field, csv_columns, "supplier_notes")
 
     with tab4:
-        st.markdown("**🏷️ Tag Management & Assignment**")
-        st.info("💡 Tags help categorize and organize your companies. Configure automatic tag detection or manually assign tag columns.")
+        st.markdown("**🏷️ Tag-Verwaltung & Zuweisung**")
+        st.info("💡 Tags helfen, Ihre Firmen zu kategorisieren und zu organisieren. Konfigurieren Sie die automatische Tag-Erkennung oder weisen Sie Tag-Spalten manuell zu.")
 
         if uploaded_file is not None and df is not None:
             # Auto-detection section
-            st.markdown("### 🔍 **Auto-Detection Results**")
+            st.markdown("### 🔍 **Automatische Erkennungsergebnisse**")
             tag_mappings = detect_tag_columns(df)
 
             if tag_mappings:
                 col1, col2 = st.columns([1, 1])
 
                 with col1:
-                    st.markdown("**🎯 Detected Tag Columns**")
+                    st.markdown("**🎯 Erkannte Tag-Spalten**")
                     for csv_col, format_type in tag_mappings.items():
                         format_description = {
-                            'comma_separated': '📝 Comma-separated (e.g., "VIP, Enterprise")',
-                            'single_tag': '🏷️ Single tag per column',
+                            'comma_separated': '📝 Kommagetrennt (z.B. "VIP, Enterprise")',
+                            'single_tag': '🏷️ Ein Tag pro Spalte',
                             'one_hot': '☑️ Boolean (1/0, true/false)'
-                        }.get(format_type, '❓ Unknown format')
+                        }.get(format_type, '❓ Unbekanntes Format')
 
                         st.write(f"• **{csv_col}**: {format_description}")
 
                 with col2:
-                    st.markdown("**👀 Tag Preview**")
+                    st.markdown("**👀 Tag-Vorschau**")
                     if len(df) > 0:
                         # Show sample tag values from first few rows (optimized for large files)
                         total_rows = len(df)
                         if total_rows > 10000:
-                            st.caption(f"📊 Large dataset ({total_rows:,} rows). Showing sample from first 3 rows.")
+                            st.caption(f"📊 Großer Datensatz ({total_rows:,} Zeilen). Zeige Beispiel von den ersten 3 Zeilen.")
                             sample_rows = 3
                         else:
                             sample_rows = min(3, total_rows)
@@ -419,8 +419,8 @@ def _render_field_mapping_section(required_fields: list, optional_fields: list, 
             st.markdown("---")
 
             # Manual assignment section
-            st.markdown("### 🎛️ **Manual Tag Column Assignment**")
-            st.info("💡 Override auto-detection or add missed columns by manually mapping CSV columns to tag formats.")
+            st.markdown("### 🎛️ **Manuelle Tag-Spaltenzuweisung**")
+            st.info("💡 Überschreiben Sie die automatische Erkennung oder fügen Sie fehlende Spalten hinzu, indem Sie CSV-Spalten manuell Tag-Formaten zuordnen.")
 
             # Initialize session state for manual tag mappings
             if 'manual_tag_mappings' not in st.session_state:
@@ -429,12 +429,12 @@ def _render_field_mapping_section(required_fields: list, optional_fields: list, 
             col1, col2, col3 = st.columns([1, 1, 1])
 
             with col1:
-                st.markdown("**📝 Comma-Separated Tags**")
-                st.caption("Columns with multiple tags separated by commas")
+                st.markdown("**📝 Kommagetrennte Tags**")
+                st.caption("Spalten mit mehreren durch Kommas getrennten Tags")
 
                 # Multi-select for comma-separated columns
                 comma_cols = st.multiselect(
-                    "Select comma-separated tag columns:",
+                    "Kommagetrennte Tag-Spalten auswählen:",
                     options=[col for col in csv_columns if col != "Select"],
                     default=[col for col, fmt in tag_mappings.items() if fmt == 'comma_separated'],
                     key="comma_tag_cols"
@@ -444,11 +444,11 @@ def _render_field_mapping_section(required_fields: list, optional_fields: list, 
                     st.session_state.manual_tag_mappings[col] = 'comma_separated'
 
             with col2:
-                st.markdown("**🏷️ Single Tag Columns**")
-                st.caption("Columns with one tag per cell")
+                st.markdown("**🏷️ Einzel-Tag-Spalten**")
+                st.caption("Spalten mit einem Tag pro Zelle")
 
                 single_cols = st.multiselect(
-                    "Select single tag columns:",
+                    "Einzel-Tag-Spalten auswählen:",
                     options=[col for col in csv_columns if col != "Select"],
                     default=[col for col, fmt in tag_mappings.items() if fmt == 'single_tag'],
                     key="single_tag_cols"
@@ -458,11 +458,11 @@ def _render_field_mapping_section(required_fields: list, optional_fields: list, 
                     st.session_state.manual_tag_mappings[col] = 'single_tag'
 
             with col3:
-                st.markdown("**☑️ One-Hot Encoded**")
-                st.caption("Boolean columns (1/0, true/false)")
+                st.markdown("**☑️ One-Hot-Codiert**")
+                st.caption("Boolean-Spalten (1/0, true/false)")
 
                 onehot_cols = st.multiselect(
-                    "Select one-hot tag columns:",
+                    "One-Hot-Tag-Spalten auswählen:",
                     options=[col for col in csv_columns if col != "Select"],
                     default=[col for col, fmt in tag_mappings.items() if fmt == 'one_hot'],
                     key="onehot_tag_cols"
@@ -476,22 +476,22 @@ def _render_field_mapping_section(required_fields: list, optional_fields: list, 
 
             if final_tag_mappings:
                 st.markdown("---")
-                st.markdown("### ✅ **Final Tag Configuration**")
+                st.markdown("### ✅ **Finale Tag-Konfiguration**")
 
                 col1, col2 = st.columns([1, 1])
 
                 with col1:
-                    st.markdown("**📊 Summary**")
+                    st.markdown("**📊 Zusammenfassung**")
                     format_counts = {}
                     for fmt in final_tag_mappings.values():
                         format_counts[fmt] = format_counts.get(fmt, 0) + 1
 
                     for fmt, count in format_counts.items():
                         format_emoji = {'comma_separated': '📝', 'single_tag': '🏷️', 'one_hot': '☑️'}.get(fmt, '❓')
-                        st.write(f"{format_emoji} **{fmt.replace('_', ' ').title()}**: {count} columns")
+                        st.write(f"{format_emoji} **{fmt.replace('_', ' ').title()}**: {count} Spalten")
 
                 with col2:
-                    st.markdown("**🗂️ All Tag Columns**")
+                    st.markdown("**🗂️ Alle Tag-Spalten**")
                     for csv_col, format_type in final_tag_mappings.items():
                         format_emoji = {'comma_separated': '📝', 'single_tag': '🏷️', 'one_hot': '☑️'}.get(format_type, '❓')
                         st.write(f"{format_emoji} {csv_col}")
@@ -500,26 +500,26 @@ def _render_field_mapping_section(required_fields: list, optional_fields: list, 
                 st.session_state.final_tag_mappings = final_tag_mappings
 
             else:
-                st.warning("⚠️ No tag columns configured. Tags will not be assigned during import.")
+                st.warning("⚠️ Keine Tag-Spalten konfiguriert. Tags werden beim Import nicht zugewiesen.")
                 st.session_state.final_tag_mappings = {}
 
         else:
-            st.info("📤 **Upload a CSV file** to configure tag column detection and assignment.")
+            st.info("📤 **Laden Sie eine CSV-Datei hoch**, um die Tag-Spaltenerkennung und -zuweisung zu konfigurieren.")
 
             # Show supported formats when no file is uploaded
-            st.markdown("### 📋 **Supported Tag Formats**")
+            st.markdown("### 📋 **Unterstützte Tag-Formate**")
             col1, col2, col3 = st.columns([1, 1, 1])
 
             with col1:
-                st.markdown("**📝 Comma-Separated**")
+                st.markdown("**📝 Kommagetrennt**")
                 st.code('Tags\n"VIP, Enterprise, Marketing"\n"Client, Premium"')
 
             with col2:
-                st.markdown("**🏷️ Single Tag**")
+                st.markdown("**🏷️ Einzel-Tag**")
                 st.code('Primary Tag,Category\nVIP,Technology\nEnterprise,Marketing')
 
             with col3:
-                st.markdown("**☑️ One-Hot Encoded**")
+                st.markdown("**☑️ One-Hot-Codiert**")
                 st.code('Tag_VIP,Tag_Enterprise\n1,0\n0,1')
 
 def _execute_import_with_progress(import_type: str, row_count: int):
@@ -669,21 +669,21 @@ with col1:
     api_key, is_connected = render_api_configuration(test_api_connection)
 
 with col2:
-    st.subheader("📁 File Upload & Type")
+    st.subheader("📁 Datei-Upload & Typ")
 
     if st.session_state.crm_api_key:
         import_type = st.selectbox(
-            "Import Type",
+            "Import-Typ",
             options=['companies', 'persons'],
             index=0 if st.session_state.import_type == 'companies' else 1,
-            help="Choose what you want to import"
+            help="Wählen Sie aus, was Sie importieren möchten"
         )
         st.session_state.import_type = import_type
 
         uploaded_file = st.file_uploader(
-            f"Choose CSV or Excel file for {import_type}",
+            f"CSV- oder Excel-Datei für {import_type} auswählen",
             type=['csv', 'xlsx', 'xls'],
-            help=f"Upload a file containing {import_type} data"
+            help=f"Datei mit {import_type}-Daten hochladen"
         )
 
         if uploaded_file is not None:
@@ -697,16 +697,16 @@ with col2:
                 # Don't clear field_mapping on file upload - user might want to keep mappings
                 row_count = len(df)
                 col_count = len(df.columns)
-                st.success(f"✅ File uploaded: {row_count:,} rows, {col_count} columns")
+                st.success(f"✅ Datei hochgeladen: {row_count:,} Zeilen, {col_count} Spalten")
 
                 # Show appropriate preview based on file size
                 preview_expanded = row_count <= 100  # Only expand by default for small files
-                with st.expander("📋 Preview Data", expanded=preview_expanded):
+                with st.expander("📋 Datenvorschau", expanded=preview_expanded):
                     if row_count > 1000:
-                        st.info(f"📊 Large file detected ({row_count:,} rows). Showing first 10 rows for performance.")
+                        st.info(f"📊 Große Datei erkannt ({row_count:,} Zeilen). Zeige erste 10 Zeilen zur Performance.")
                         preview_rows = 10
                     elif row_count > 100:
-                        st.info(f"📊 Medium file ({row_count:,} rows). Showing first 20 rows.")
+                        st.info(f"📊 Mittlere Datei ({row_count:,} Zeilen). Zeige erste 20 Zeilen.")
                         preview_rows = 20
                     else:
                         preview_rows = min(row_count, 50)
@@ -714,21 +714,21 @@ with col2:
                     st.dataframe(df.head(preview_rows), use_container_width=True)
 
             except Exception as e:
-                st.error(f"❌ Error reading file: {str(e)}")
+                st.error(f"❌ Fehler beim Lesen der Datei: {str(e)}")
     else:
-        st.info("Please test API connection first")
+        st.info("Bitte testen Sie zuerst die API-Verbindung")
 
 if st.session_state.uploaded_data is not None:
-    st.subheader("🔄 Column Mapping")
+    st.subheader("🔄 Spaltenzuordnung")
 
     if st.session_state.import_type == 'companies':
         required_fields = get_required_company_fields()
         optional_fields = get_optional_company_fields()
-        st.info("📋 **Company Fields**: Map your CSV columns to Poool company fields")
+        st.info("📋 **Firmenfelder**: Ordnen Sie Ihre CSV-Spalten den Poool-Firmenfeldern zu")
     else:
         required_fields = get_required_person_fields()
         optional_fields = get_optional_person_fields()
-        st.info("👤 **Person Fields**: Map your CSV columns to Poool person fields")
+        st.info("👤 **Personenfelder**: Ordnen Sie Ihre CSV-Spalten den Poool-Personenfeldern zu")
 
     csv_columns = [''] + list(st.session_state.uploaded_data.columns)
     all_fields = required_fields + optional_fields
@@ -745,21 +745,21 @@ if st.session_state.uploaded_data is not None:
                 st.session_state.get('manual_tag_mappings', {})
             )
             st.download_button(
-                label="📥 Download Mapping",
+                label="📥 Zuordnung herunterladen",
                 data=json_str,
                 file_name=f"mapping_config_{st.session_state.import_type}.json",
                 mime="application/json",
-                help="Download current mapping configuration as JSON"
+                help="Aktuelle Zuordnungskonfiguration als JSON herunterladen"
             )
         else:
-            st.button("📥 Download Mapping", disabled=True, help="No mappings to export")
+            st.button("📥 Zuordnung herunterladen", disabled=True, help="Keine Zuordnungen zum Exportieren")
 
     with col2:
         # Upload mapping from JSON
         uploaded_mapping = st.file_uploader(
-            "Upload Mapping",
+            "Zuordnung hochladen",
             type=['json'],
-            help="Upload a previously saved mapping configuration",
+            help="Eine zuvor gespeicherte Zuordnungskonfiguration hochladen",
             key="mapping_upload",
             label_visibility="collapsed"
         )
@@ -800,7 +800,7 @@ if st.session_state.uploaded_data is not None:
             st.session_state.mapping_file_processed = False
 
     with col3:
-        if st.button("🗑️ Clear All", help="Remove all field mappings"):
+        if st.button("🗑️ Alle löschen", help="Alle Feldzuordnungen entfernen"):
             st.session_state.field_mapping = {}
             st.session_state.final_tag_mappings = {}
             st.session_state.manual_tag_mappings = {}
@@ -808,7 +808,7 @@ if st.session_state.uploaded_data is not None:
 
     with col4:
         mapped_count = len([v for v in st.session_state.field_mapping.values() if v and v != ""])
-        st.metric("Mapped", f"{mapped_count}/{len(all_fields)}")
+        st.metric("Zugeordnet", f"{mapped_count}/{len(all_fields)}")
 
         # Debug info (remove later)
         if 'debug_mapping' not in st.session_state:
@@ -829,16 +829,16 @@ if st.session_state.uploaded_data is not None:
     # Render the field mapping section using refactored helper functions
     _render_field_mapping_section(required_fields, optional_fields, csv_columns)
 
-    with st.expander("📋 Current Mapping", expanded=False):
+    with st.expander("📋 Aktuelle Zuordnung", expanded=False):
         if st.session_state.field_mapping:
             mapping_df = pd.DataFrame([
-                {"CSV Column": csv_col, "API Field": api_field}
+                {"CSV-Spalte": csv_col, "API-Feld": api_field}
                 for csv_col, api_field in st.session_state.field_mapping.items()
                 if api_field
             ])
             st.dataframe(mapping_df, use_container_width=True, hide_index=True)
         else:
-            st.info("No mappings configured yet")
+            st.info("Noch keine Zuordnungen konfiguriert")
 
     # Check if ALL required fields are mapped
     mapped_required_fields = set(
@@ -847,17 +847,17 @@ if st.session_state.uploaded_data is not None:
     )
     required_mapped = len(mapped_required_fields) == len(required_fields)
 
-    st.subheader("📊 Import Preview")
+    st.subheader("📊 Import-Vorschau")
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("Rows to Process", len(st.session_state.uploaded_data))
+        st.metric("Zu verarbeitende Zeilen", len(st.session_state.uploaded_data))
     with col2:
-        st.metric("Fields Mapped", len([x for x in st.session_state.field_mapping.values() if x]))
+        st.metric("Zugeordnete Felder", len([x for x in st.session_state.field_mapping.values() if x]))
     with col3:
         if required_mapped:
-            st.metric("Status", "✅ Ready", delta="Required fields mapped")
+            st.metric("Status", "✅ Bereit", delta="Pflichtfelder zugeordnet")
         else:
-            st.metric("Status", "⚠️ Missing Required", delta="Map required fields")
+            st.metric("Status", "⚠️ Pflichtfelder fehlen", delta="Pflichtfelder zuordnen")
 
     if required_mapped:
         # Pre-validation before showing import button
@@ -889,53 +889,53 @@ if st.session_state.uploaded_data is not None:
 
             # Show performance warning for large files
             if row_count > 5000:
-                st.warning(f"⏳ Very large file ({row_count:,} rows). Import may take several minutes. Please be patient and don't refresh the page.")
+                st.warning(f"⏳ Sehr große Datei ({row_count:,} Zeilen). Import kann mehrere Minuten dauern. Bitte haben Sie Geduld und aktualisieren Sie die Seite nicht.")
             elif row_count > 1000:
-                st.info(f"📊 Large file ({row_count:,} rows). Import may take 1-2 minutes.")
+                st.info(f"📊 Große Datei ({row_count:,} Zeilen). Import kann 1-2 Minuten dauern.")
             elif row_count > 500:
-                st.info(f"📊 Medium file ({row_count:,} rows). Should complete in under a minute.")
+                st.info(f"📊 Mittlere Datei ({row_count:,} Zeilen). Sollte in unter einer Minute fertig sein.")
 
-            if st.button(f"🚀 Create {st.session_state.import_type.title()}", type="primary"):
+            if st.button(f"🚀 {st.session_state.import_type.title()} erstellen", type="primary"):
                 _execute_import_with_progress(st.session_state.import_type, row_count)
         else:
-            st.error("⚠️ Please fix the validation errors above before importing.")
+            st.error("⚠️ Bitte beheben Sie die Validierungsfehler oben, bevor Sie importieren.")
 
 # Display import results
 # noinspection PyUnreachableCode
 if st.session_state.import_results:
     results = st.session_state.import_results
-    st.subheader("📊 Import Results")
+    st.subheader("📊 Import-Ergebnisse")
 
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("✅ Successful", len(results['successful']))
+        st.metric("✅ Erfolgreich", len(results['successful']))
     with col2:
-        st.metric("❌ Failed", len(results['failed']))
+        st.metric("❌ Fehlgeschlagen", len(results['failed']))
     with col3:
         total = len(results['successful']) + len(results['failed'])
         success_rate = (len(results['successful']) / total * 100) if total > 0 else 0
-        st.metric("Success Rate", f"{success_rate:.1f}%")
+        st.metric("Erfolgsquote", f"{success_rate:.1f}%")
 
     # Show successful imports
     if results['successful']:
         success_count = len(results['successful'])
         expanded = success_count <= 100  # Only expand by default for small results
 
-        with st.expander("✅ Successful Imports", expanded=expanded):
+        with st.expander("✅ Erfolgreiche Imports", expanded=expanded):
             success_data = []
 
             # Limit display for large results sets
             if success_count > 1000:
-                st.info(f"📊 Large import ({success_count:,} successful). Showing first 100 for performance.")
+                st.info(f"📊 Großer Import ({success_count:,} erfolgreich). Zeige erste 100 zur Performance.")
                 items_to_show = results['successful'][:100]
             elif success_count > 500:
-                st.info(f"📊 Medium import ({success_count:,} successful). Showing first 200.")
+                st.info(f"📊 Mittlerer Import ({success_count:,} erfolgreich). Zeige erste 200.")
                 items_to_show = results['successful'][:200]
             else:
                 items_to_show = results['successful']
 
             for item in items_to_show:
-                row_info = {"Row": item['row']}
+                row_info = {"Zeile": item['row']}
                 if results['import_type'] == 'companies':
                     row_info.update({
                         "Name": item['created'].get('name', 'N/A'),
@@ -943,8 +943,8 @@ if st.session_state.import_results:
                     })
                 else:
                     row_info.update({
-                        "First Name": item['created'].get('firstname', 'N/A'),
-                        "Last Name": item['created'].get('lastname', 'N/A'),
+                        "Vorname": item['created'].get('firstname', 'N/A'),
+                        "Nachname": item['created'].get('lastname', 'N/A'),
                         "ID": item['created'].get('id', 'N/A')
                     })
                 success_data.append(row_info)
@@ -953,7 +953,7 @@ if st.session_state.import_results:
                 st.dataframe(pd.DataFrame(success_data), use_container_width=True, hide_index=True)
 
                 if len(items_to_show) < success_count:
-                    st.caption(f"Showing {len(items_to_show)} of {success_count:,} successful imports")
+                    st.caption(f"Zeige {len(items_to_show)} von {success_count:,} erfolgreichen Imports")
 
 
     # Show failed imports with enhanced context
@@ -961,12 +961,12 @@ if st.session_state.import_results:
         failed_count = len(results['failed'])
         expanded = failed_count <= 50  # Only expand by default for small failure sets
 
-        with st.expander("❌ Failed Imports", expanded=expanded):
-            st.warning(f"💡 **Tip**: Review the data in these rows and fix the issues before re-importing.")
+        with st.expander("❌ Fehlgeschlagene Imports", expanded=expanded):
+            st.warning(f"💡 **Tipp**: Überprüfen Sie die Daten in diesen Zeilen und beheben Sie die Probleme, bevor Sie erneut importieren.")
 
             # Limit display for large failure sets
             if failed_count > 100:
-                st.info(f"📊 Large failure set ({failed_count:,} failed). Showing first 50 for performance.")
+                st.info(f"📊 Große Fehleranzahl ({failed_count:,} fehlgeschlagen). Zeige erste 50 zur Performance.")
                 items_to_show = results['failed'][:50]
             else:
                 items_to_show = results['failed']
@@ -978,19 +978,19 @@ if st.session_state.import_results:
 
                 # Add contextual suggestions based on error type
                 if 'Missing required field' in error_msg:
-                    suggestions.append("Check column mapping for required fields")
+                    suggestions.append("Prüfen Sie die Spaltenzuordnung für Pflichtfelder")
                 elif 'email' in error_msg.lower():
-                    suggestions.append("Verify email format (e.g., user@domain.com)")
+                    suggestions.append("Überprüfen Sie das E-Mail-Format (z.B. benutzer@domain.com)")
                 elif 'phone' in error_msg.lower():
-                    suggestions.append("Include country code (e.g., +49 30 12345678)")
+                    suggestions.append("Fügen Sie Ländervorwahl hinzu (z.B. +49 30 12345678)")
                 elif 'duplicate' in error_msg.lower():
-                    suggestions.append("This record may already exist in the CRM")
+                    suggestions.append("Dieser Datensatz existiert möglicherweise bereits im CRM")
                 elif '400' in error_msg or 'Bad Request' in error_msg:
-                    suggestions.append("Check data format and required fields")
+                    suggestions.append("Prüfen Sie Datenformat und Pflichtfelder")
                 elif '401' in error_msg or 'Unauthorized' in error_msg:
-                    suggestions.append("Verify API key is correct")
+                    suggestions.append("Überprüfen Sie, ob der API-Schlüssel korrekt ist")
                 elif '403' in error_msg or 'Forbidden' in error_msg:
-                    suggestions.append("Check API permissions")
+                    suggestions.append("Prüfen Sie API-Berechtigungen")
 
                 # Show sample data from the failed row
                 sample_data = []
@@ -1000,38 +1000,38 @@ if st.session_state.import_results:
                         sample_data.append(f"{k}: {v}")
 
                 failure_data.append({
-                    "Row": item['row'],
-                    "Error": error_msg,
-                    "Sample Data": " | ".join(sample_data) if sample_data else "N/A",
-                    "Suggestion": " | ".join(suggestions) if suggestions else "Review data format"
+                    "Zeile": item['row'],
+                    "Fehler": error_msg,
+                    "Beispieldaten": " | ".join(sample_data) if sample_data else "N/A",
+                    "Vorschlag": " | ".join(suggestions) if suggestions else "Datenformat überprüfen"
                 })
 
             if failure_data:
                 st.dataframe(pd.DataFrame(failure_data), use_container_width=True, hide_index=True)
 
                 if len(items_to_show) < failed_count:
-                    st.caption(f"Showing {len(items_to_show)} of {failed_count:,} failed imports")
+                    st.caption(f"Zeige {len(items_to_show)} von {failed_count:,} fehlgeschlagenen Imports")
 
                 # Common error patterns summary
                 error_types = {}
                 for item in results['failed']:
                     error = item['error']
                     if 'Missing required field' in error:
-                        error_types['Missing Required Fields'] = error_types.get('Missing Required Fields', 0) + 1
+                        error_types['Fehlende Pflichtfelder'] = error_types.get('Fehlende Pflichtfelder', 0) + 1
                     elif any(code in error for code in ['400', '401', '403', '500']):
-                        error_types['API Errors'] = error_types.get('API Errors', 0) + 1
+                        error_types['API-Fehler'] = error_types.get('API-Fehler', 0) + 1
                     else:
-                        error_types['Data Format Issues'] = error_types.get('Data Format Issues', 0) + 1
+                        error_types['Datenformat-Probleme'] = error_types.get('Datenformat-Probleme', 0) + 1
 
                 if error_types:
-                    st.subheader("📊 Error Summary")
+                    st.subheader("📊 Fehlerzusammenfassung")
                     cols = st.columns(len(error_types))
                     for i, (error_type, count) in enumerate(error_types.items()):
                         cols[i].metric(error_type, count)
 
-    if st.button("🔄 Clear Results"):
+    if st.button("🔄 Ergebnisse löschen"):
         st.session_state.import_results = None
         st.rerun()
 
 st.markdown("---")
-st.markdown("💡 **Tip:** Check the mapping carefully before importing to avoid errors")
+st.markdown("💡 **Tipp:** Überprüfen Sie die Zuordnung sorgfältig vor dem Import, um Fehler zu vermeiden")

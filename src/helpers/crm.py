@@ -407,7 +407,7 @@ def get_tag_ids_for_names(client: PooolAPIClient, tag_names: List[str], tag_cach
             # Create missing tag
             new_tag_id, error = client.create_tag_if_missing(tag_name_clean)
             if error:
-                return [], [], f"Failed to create tag '{tag_name_clean}': {error}"
+                return [], [], f"Fehler beim Erstellen des Tags '{tag_name_clean}': {error}"
 
             if new_tag_id:
                 tag_ids.append(new_tag_id)
@@ -551,7 +551,7 @@ def match_company_by_identifier(client: PooolAPIClient, identifier_field: str, i
     """
     try:
         if not identifier_value or not str(identifier_value).strip():
-            return None, "Empty identifier value"
+            return None, "Leerer Identifikator-Wert"
 
         identifier_value = str(identifier_value).strip()
 
@@ -562,10 +562,10 @@ def match_company_by_identifier(client: PooolAPIClient, identifier_field: str, i
                 # Verify company exists
                 company_data, error = client.get_company_by_id(company_id)
                 if error:
-                    return None, f"Company ID {company_id} not found"
+                    return None, f"Firmen-ID {company_id} nicht gefunden"
                 return company_id, None
             except ValueError:
-                return None, f"Invalid ID value: {identifier_value}"
+                return None, f"Ungültiger ID-Wert: {identifier_value}"
 
         # Search by other fields
         results, error = client.search_companies_by_field(identifier_field, identifier_value)
@@ -574,7 +574,7 @@ def match_company_by_identifier(client: PooolAPIClient, identifier_field: str, i
             return None, error
 
         if not results:
-            return None, f"No company found with {identifier_field}='{identifier_value}'"
+            return None, f"Keine Firma gefunden mit {identifier_field}='{identifier_value}'"
 
         # Look for exact match
         for company in results:
@@ -583,10 +583,10 @@ def match_company_by_identifier(client: PooolAPIClient, identifier_field: str, i
                 return company.get('id'), None
 
         # If no exact match, return first result with warning
-        return results[0].get('id'), f"No exact match, using closest: {results[0].get('name', 'Unknown')}"
+        return results[0].get('id'), f"Keine exakte Übereinstimmung, verwende nächste: {results[0].get('name', 'Unbekannt')}"
 
     except Exception as e:
-        return None, f"Error matching company: {str(e)}"
+        return None, f"Fehler beim Abgleichen der Firma: {str(e)}"
 
 
 def match_person_by_identifier(client: PooolAPIClient, identifier_field: str, identifier_value: str) -> Tuple[Optional[int], Optional[str]]:
@@ -596,7 +596,7 @@ def match_person_by_identifier(client: PooolAPIClient, identifier_field: str, id
     """
     try:
         if not identifier_value or not str(identifier_value).strip():
-            return None, "Empty identifier value"
+            return None, "Leerer Identifikator-Wert"
 
         identifier_value = str(identifier_value).strip()
 
@@ -607,10 +607,10 @@ def match_person_by_identifier(client: PooolAPIClient, identifier_field: str, id
                 # Verify person exists
                 person_data, error = client.get_person_by_id(person_id)
                 if error:
-                    return None, f"Person ID {person_id} not found"
+                    return None, f"Personen-ID {person_id} nicht gefunden"
                 return person_id, None
             except ValueError:
-                return None, f"Invalid ID value: {identifier_value}"
+                return None, f"Ungültiger ID-Wert: {identifier_value}"
 
         # Search by other fields (name, email, etc.)
         results, error = client.search_persons_by_field(identifier_field, identifier_value)
@@ -619,7 +619,7 @@ def match_person_by_identifier(client: PooolAPIClient, identifier_field: str, id
             return None, error
 
         if not results:
-            return None, f"No person found with {identifier_field}='{identifier_value}'"
+            return None, f"Keine Person gefunden mit {identifier_field}='{identifier_value}'"
 
         # Look for exact match
         for person in results:
@@ -629,11 +629,11 @@ def match_person_by_identifier(client: PooolAPIClient, identifier_field: str, id
 
         # If no exact match, return first result with warning
         first_person = results[0]
-        name = f"{first_person.get('firstname', '')} {first_person.get('lastname', '')}".strip() or 'Unknown'
-        return first_person.get('id'), f"No exact match, using closest: {name}"
+        name = f"{first_person.get('firstname', '')} {first_person.get('lastname', '')}".strip() or 'Unbekannt'
+        return first_person.get('id'), f"Keine exakte Übereinstimmung, verwende nächste: {name}"
 
     except Exception as e:
-        return None, f"Error matching person: {str(e)}"
+        return None, f"Fehler beim Abgleichen der Person: {str(e)}"
 
 
 def process_single_update(client: PooolAPIClient, index: int, row_data: Dict, field_mapping: Dict,

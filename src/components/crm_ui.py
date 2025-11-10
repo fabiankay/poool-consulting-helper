@@ -13,7 +13,7 @@ from .session_state import init_global_crm_state
 
 def render_wip_warning():
     """Render a consistent 'Work in Progress' warning banner."""
-    st.header("This is :red[experimental] - Work in Progress", divider="red")
+    st.header("Dies ist :red[experimentell] - In Arbeit", divider="red")
 
 
 def render_environment_selector() -> Tuple[str, Optional[str]]:
@@ -26,7 +26,7 @@ def render_environment_selector() -> Tuple[str, Optional[str]]:
     # Initialize global state
     init_global_crm_state()
 
-    st.subheader("🌍 Environment Selection")
+    st.subheader("🌍 Umgebungsauswahl")
 
     col1, col2, col3 = st.columns(3)
 
@@ -38,21 +38,21 @@ def render_environment_selector() -> Tuple[str, Optional[str]]:
             current_index = 0
 
         env_option = st.radio(
-            "Select Environment",
+            "Umgebung auswählen",
             options=["production", "staging", "custom"],
             index=current_index,
             key="crm_environment",  # Bind directly to session state for immediate updates
-            help="Choose which Poool environment to connect to"
+            help="Wählen Sie die Poool-Umgebung für die Verbindung"
         )
 
     with col2:
         custom_url = None
         if env_option == 'custom':
             custom_url = st.text_input(
-                "Custom URL (Sandbox)",
+                "Benutzerdefinierte URL (Sandbox)",
                 value=st.session_state.crm_custom_url or '',
                 placeholder="https://your-sandbox.poool.rocks",
-                help="Enter your sandbox environment URL"
+                help="Geben Sie Ihre Sandbox-Umgebungs-URL ein"
             )
             st.session_state.crm_custom_url = custom_url
         else:
@@ -60,11 +60,11 @@ def render_environment_selector() -> Tuple[str, Optional[str]]:
 
     with col3:
         if env_option == 'production':
-            st.info("🟢 Production environment")
+            st.info("🟢 Produktionsumgebung")
         elif env_option == 'staging':
-            st.info("🟡 Staging environment")
+            st.info("🟡 Staging-Umgebung")
         else:
-            st.info("🧪 Sandbox environment")
+            st.info("🧪 Sandbox-Umgebung")
 
     return env_option, custom_url
 
@@ -82,41 +82,41 @@ def render_api_configuration(test_connection_callback) -> Tuple[str, bool]:
     # Initialize global state
     init_global_crm_state()
 
-    st.subheader("🔑 API Configuration")
+    st.subheader("🔑 API-Konfiguration")
 
     user_api_key = st.text_input(
-        "Poool API Key",
+        "Poool API-Schlüssel",
         value=st.session_state.crm_api_key,
         type="password",
-        placeholder="Enter your API key...",
-        help="Your Poool CRM API key"
+        placeholder="Geben Sie Ihren API-Schlüssel ein...",
+        help="Ihr Poool CRM API-Schlüssel"
     )
 
-    if st.button("🔍 Test Connection", type="primary"):
+    if st.button("🔍 Verbindung testen", type="primary"):
         if not user_api_key:
-            st.error("Please enter an API key")
+            st.error("Bitte geben Sie einen API-Schlüssel ein")
             return user_api_key, False
         else:
             current_env = st.session_state.crm_environment
             custom_url = st.session_state.crm_custom_url if current_env == 'custom' else None
 
             if current_env == 'custom' and not custom_url:
-                st.error("Please enter a custom URL for sandbox environment")
+                st.error("Bitte geben Sie eine benutzerdefinierte URL für die Sandbox-Umgebung ein")
                 return user_api_key, False
 
-            with st.spinner(f"Testing API connection to {current_env}..."):
+            with st.spinner(f"Teste API-Verbindung zu {current_env}..."):
                 is_valid, message = test_connection_callback(user_api_key, current_env, custom_url)
 
                 if is_valid:
                     st.session_state.crm_api_key = user_api_key
-                    st.success(f"✅ API connection successful to **{current_env}**!")
+                    st.success(f"✅ API-Verbindung zu **{current_env}** erfolgreich!")
                     st.rerun()
                 else:
-                    st.error(f"❌ Connection failed to {current_env}: {message}")
+                    st.error(f"❌ Verbindung zu {current_env} fehlgeschlagen: {message}")
                     return user_api_key, False
 
     if st.session_state.crm_api_key and st.session_state.crm_api_key == user_api_key:
-        st.success("🟢 API Ready")
+        st.success("🟢 API bereit")
         return user_api_key, True
 
     return user_api_key, False
@@ -132,18 +132,18 @@ def render_file_uploader(operation_type: str = "import") -> Optional[pd.DataFram
     Returns:
         DataFrame or None
     """
-    st.subheader("📁 File Upload")
+    st.subheader("📁 Datei-Upload")
 
     if not st.session_state.get('api_key'):
-        st.info("⚠️ Please configure API connection first")
+        st.info("⚠️ Bitte konfigurieren Sie zuerst die API-Verbindung")
         return None
 
-    action_text = "import" if operation_type == "import" else "update"
+    action_text = "importieren" if operation_type == "import" else "aktualisieren"
 
     uploaded_file = st.file_uploader(
-        f"Choose CSV or Excel file with data to {action_text}",
+        f"CSV- oder Excel-Datei mit Daten zum {action_text} auswählen",
         type=['csv', 'xlsx', 'xls'],
-        help=f"Upload a file containing the data to {action_text}"
+        help=f"Datei mit den zu {action_text}den Daten hochladen"
     )
 
     if uploaded_file is not None:
@@ -156,16 +156,16 @@ def render_file_uploader(operation_type: str = "import") -> Optional[pd.DataFram
             st.session_state.uploaded_data = df
             row_count = len(df)
             col_count = len(df.columns)
-            st.success(f"✅ File uploaded: {row_count:,} rows, {col_count} columns")
+            st.success(f"✅ Datei hochgeladen: {row_count:,} Zeilen, {col_count} Spalten")
 
             # Show sample
-            with st.expander("📊 Preview Data (first 5 rows)"):
+            with st.expander("📊 Datenvorschau (erste 5 Zeilen)"):
                 st.dataframe(df.head(), use_container_width=True)
 
             return df
 
         except Exception as e:
-            st.error(f"Error reading file: {str(e)}")
+            st.error(f"Fehler beim Lesen der Datei: {str(e)}")
             st.session_state.uploaded_data = None
             return None
 
@@ -205,12 +205,18 @@ def render_results_display(results: dict, operation_type: str = "import"):
     if successful:
         with st.expander(f"✅ Successful {operation_type.title()}s ({len(successful)})", expanded=True):
             success_df = pd.DataFrame(successful)
+            # Convert object columns to string to avoid PyArrow serialization issues
+            for col in success_df.select_dtypes(include=['object']).columns:
+                success_df[col] = success_df[col].astype(str)
             st.dataframe(success_df, use_container_width=True)
 
     # Failed records
     if failed:
         with st.expander(f"❌ Failed {operation_type.title()}s ({len(failed)})", expanded=True):
             failed_df = pd.DataFrame(failed)
+            # Convert object columns to string to avoid PyArrow serialization issues
+            for col in failed_df.select_dtypes(include=['object']).columns:
+                failed_df[col] = failed_df[col].astype(str)
             st.dataframe(failed_df, use_container_width=True)
 
 
@@ -239,16 +245,16 @@ def render_mapping_summary(field_mapping: dict):
     if not field_mapping:
         return
 
-    st.markdown("### 📋 Current Mapping Summary")
+    st.markdown("### 📋 Aktuelle Zuordnungsübersicht")
 
     mapping_df = pd.DataFrame([
-        {"CSV Column": csv_col, "API Field": api_field}
+        {"CSV-Spalte": csv_col, "API-Feld": api_field}
         for csv_col, api_field in field_mapping.items()
     ])
     st.dataframe(mapping_df, use_container_width=True)
 
     mapped_count = len(field_mapping)
-    st.info(f"✅ {mapped_count} fields mapped")
+    st.info(f"✅ {mapped_count} Felder zugeordnet")
 
 
 def render_preview_matches(df: pd.DataFrame, field_mapping: dict, identifier_field: str,
@@ -263,23 +269,23 @@ def render_preview_matches(df: pd.DataFrame, field_mapping: dict, identifier_fie
         preview_function: Function to call for preview (takes api_key, df, mapping, identifier, env, url, limit)
         entity_type: "company" or "person"
     """
-    st.markdown("### 2️⃣ Preview Matches (Optional)")
+    st.markdown("### 2️⃣ Vorschau Übereinstimmungen (Optional)")
 
     # Check if identifier is mapped
     identifier_mapped = identifier_field in field_mapping.values()
 
     if not identifier_mapped:
-        st.warning(f"⚠️ Map the identifier field '{identifier_field}' to enable preview")
+        st.warning(f"⚠️ Ordnen Sie das Identifikationsfeld '{identifier_field}' zu, um die Vorschau zu aktivieren")
         return
 
     col1, col2 = st.columns([3, 1])
 
     with col1:
-        st.markdown("Preview how records will be matched before updating:")
+        st.markdown("Vorschau, wie Datensätze vor der Aktualisierung abgeglichen werden:")
 
     with col2:
-        if st.button("🔍 Preview Matches", type="secondary"):
-            with st.spinner("Previewing first 20 matches..."):
+        if st.button("🔍 Vorschau Übereinstimmungen", type="secondary"):
+            with st.spinner("Vorschau der ersten 20 Übereinstimmungen..."):
                 current_env = st.session_state.get('environment', 'production')
                 custom_url = st.session_state.get('custom_url') if current_env == 'custom' else None
 
@@ -297,7 +303,7 @@ def render_preview_matches(df: pd.DataFrame, field_mapping: dict, identifier_fie
 
     # Display preview results if available
     if st.session_state.get('preview_results'):
-        st.markdown("#### Preview Results")
+        st.markdown("#### Vorschau-Ergebnisse")
 
         preview_df = pd.DataFrame(st.session_state.preview_results)
 
@@ -309,16 +315,20 @@ def render_preview_matches(df: pd.DataFrame, field_mapping: dict, identifier_fie
 
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.metric("✅ Found", found_count)
+                st.metric("✅ Gefunden", found_count)
             with col2:
-                st.metric("⚠️ Fuzzy Match", fuzzy_count)
+                st.metric("⚠️ Ungenaue Übereinstimmung", fuzzy_count)
             with col3:
-                st.metric("❌ Not Found", not_found_count)
+                st.metric("❌ Nicht gefunden", not_found_count)
+
+        # Convert all object columns to string to avoid PyArrow serialization issues with mixed types
+        for col in preview_df.select_dtypes(include=['object']).columns:
+            preview_df[col] = preview_df[col].astype(str)
 
         # Show preview table
         st.dataframe(preview_df, use_container_width=True)
 
-        if st.button("Clear Preview"):
+        if st.button("Vorschau löschen"):
             st.session_state.preview_results = None
             st.rerun()
 
@@ -337,33 +347,33 @@ def render_update_execution(df: pd.DataFrame, field_mapping: dict, identifier_fi
         entity_type: "company" or "person"
         entity_icon: Icon for the update button
     """
-    st.markdown("### 3️⃣ Execute Update")
+    st.markdown("### 3️⃣ Aktualisierung ausführen")
 
     # Dry run option
     dry_run_mode = st.checkbox(
-        "🧪 Dry Run Mode (preview only, no actual updates)",
+        "🧪 Test-Modus (nur Vorschau, keine echten Aktualisierungen)",
         value=False,
-        help="When enabled, simulates the update without making actual API calls"
+        help="Wenn aktiviert, simuliert die Aktualisierung ohne echte API-Aufrufe"
     )
 
     if dry_run_mode:
-        st.info("⚠️ **Dry Run Mode Active** - No actual updates will be made. Results will show what WOULD be updated.")
+        st.info("⚠️ **Test-Modus aktiv** - Es werden keine echten Aktualisierungen vorgenommen. Ergebnisse zeigen, was aktualisiert WÜRDE.")
 
     # Check if identifier is mapped
     identifier_mapped = identifier_field in field_mapping.values()
 
     if not identifier_mapped:
-        st.error(f"⚠️ Please map the identifier field '{identifier_field}' before updating")
+        st.error(f"⚠️ Bitte ordnen Sie das Identifikationsfeld '{identifier_field}' vor der Aktualisierung zu")
     elif not field_mapping:
-        st.error("⚠️ Please map at least one field to update")
+        st.error("⚠️ Bitte ordnen Sie mindestens ein Feld zur Aktualisierung zu")
     else:
         row_count = len(df)
 
-        button_text = f"🧪 Preview {row_count:,} Updates" if dry_run_mode else f"{entity_icon} Update {row_count:,} Records"
+        button_text = f"🧪 Vorschau {row_count:,} Aktualisierungen" if dry_run_mode else f"{entity_icon} {row_count:,} Datensätze aktualisieren"
         button_type = "secondary" if dry_run_mode else "primary"
 
         if st.button(button_text, type=button_type):
-            spinner_text = f"Simulating updates for {row_count:,} {entity_type}s..." if dry_run_mode else f"Updating {row_count:,} {entity_type}s..."
+            spinner_text = f"Simuliere Aktualisierungen für {row_count:,} {entity_type}..." if dry_run_mode else f"Aktualisiere {row_count:,} {entity_type}..."
 
             with st.spinner(spinner_text):
                 current_env = st.session_state.get('environment', 'production')
@@ -401,9 +411,9 @@ def render_update_results(results: dict):
 
     # Show dry run banner if applicable
     if results.get('dry_run', False):
-        st.warning("🧪 **DRY RUN RESULTS** - No actual updates were made. This shows what WOULD have been updated.")
+        st.warning("🧪 **TEST-MODUS ERGEBNISSE** - Es wurden keine echten Aktualisierungen vorgenommen. Dies zeigt, was aktualisiert WÜRDE.")
 
-    st.subheader("📊 Update Results")
+    st.subheader("📊 Aktualisierungsergebnisse")
 
     successful = results.get('successful', [])
     failed = results.get('failed', [])
@@ -412,28 +422,34 @@ def render_update_results(results: dict):
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.metric("✅ Successful", len(successful))
+        st.metric("✅ Erfolgreich", len(successful))
     with col2:
-        st.metric("❌ Failed", len(failed))
+        st.metric("❌ Fehlgeschlagen", len(failed))
     with col3:
         total = len(successful) + len(failed)
         success_rate = (len(successful) / total * 100) if total > 0 else 0
-        st.metric("Success Rate", f"{success_rate:.1f}%")
+        st.metric("Erfolgsquote", f"{success_rate:.1f}%")
 
     # Successful updates
     if successful:
-        with st.expander(f"✅ Successful Updates ({len(successful)})", expanded=True):
+        with st.expander(f"✅ Erfolgreiche Aktualisierungen ({len(successful)})", expanded=True):
             success_df = pd.DataFrame(successful)
+            # Convert object columns to string to avoid PyArrow serialization issues
+            for col in success_df.select_dtypes(include=['object']).columns:
+                success_df[col] = success_df[col].astype(str)
             st.dataframe(success_df, use_container_width=True)
 
     # Failed updates
     if failed:
-        with st.expander(f"❌ Failed Updates ({len(failed)})", expanded=True):
+        with st.expander(f"❌ Fehlgeschlagene Aktualisierungen ({len(failed)})", expanded=True):
             failed_df = pd.DataFrame(failed)
+            # Convert object columns to string to avoid PyArrow serialization issues
+            for col in failed_df.select_dtypes(include=['object']).columns:
+                failed_df[col] = failed_df[col].astype(str)
             st.dataframe(failed_df, use_container_width=True)
 
     # Clear results button
-    if st.button("🔄 Start New Update"):
+    if st.button("🔄 Neue Aktualisierung starten"):
         st.session_state.update_results = None
         st.session_state.uploaded_data = None
         st.session_state.field_mapping = {}

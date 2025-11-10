@@ -20,13 +20,13 @@ from src.components.crm_ui import (
 )
 
 st.set_page_config(
-    page_title="CRM Update Tool",
+    page_title="CRM Aktualisierung",
     page_icon="🔄",
     layout="wide"
 )
 
-st.title("🔄 CRM Update Tool")
-st.markdown("Update existing companies in Poool CRM via API")
+st.title("🔄 CRM Aktualisierung")
+st.markdown("Bestehende Firmen im Poool CRM über die API aktualisieren")
 
 render_wip_warning()
 
@@ -59,31 +59,31 @@ with col2:
 # Main update workflow
 if st.session_state.uploaded_data is not None and st.session_state.crm_api_key:
     st.markdown("---")
-    st.subheader("🎯 Update Configuration")
+    st.subheader("🎯 Aktualisierungskonfiguration")
 
     df = st.session_state.uploaded_data
     csv_columns = [''] + list(df.columns)
 
     # Identifier Selection
-    st.markdown("### 1️⃣ Select Identifier Field")
-    st.markdown("Choose which field to use for matching existing records:")
+    st.markdown("### 1️⃣ Identifikationsfeld auswählen")
+    st.markdown("Wählen Sie, welches Feld zum Abgleich bestehender Datensätze verwendet werden soll:")
 
     col1, col2 = st.columns(2)
 
     with col1:
         identifier_field = st.selectbox(
-            "Match records by:",
+            "Datensätze abgleichen nach:",
             options=['id', 'name', 'customer_number'],
-            help="Field used to identify existing companies in the CRM"
+            help="Feld zum Identifizieren bestehender Firmen im CRM"
         )
         st.session_state.identifier_field = identifier_field
 
     with col2:
-        st.info(f"📌 Identifier: **{identifier_field}**\n\nMake sure to map this field in the next step!")
+        st.info(f"📌 Identifikator: **{identifier_field}**\n\nStellen Sie sicher, dass Sie dieses Feld im nächsten Schritt zuordnen!")
 
     # Field Mapping
-    st.markdown("### 2️⃣ Map Fields to Update")
-    st.markdown("Map CSV columns to API fields. Only mapped fields will be updated.")
+    st.markdown("### 2️⃣ Felder zum Aktualisieren zuordnen")
+    st.markdown("Ordnen Sie CSV-Spalten den API-Feldern zu. Nur zugeordnete Felder werden aktualisiert.")
 
     # Get all available fields
     all_fields = get_required_company_fields() + get_optional_company_fields()
@@ -91,10 +91,10 @@ if st.session_state.uploaded_data is not None and st.session_state.crm_api_key:
     supplier_fields = get_supplier_fields()
 
     # Organize fields by category
-    tabs = st.tabs(["Core Fields", "Client Fields", "Supplier Fields"])
+    tabs = st.tabs(["Kernfelder", "Kundenfelder", "Lieferantenfelder"])
 
     with tabs[0]:
-        st.markdown("**Company Core Fields**")
+        st.markdown("**Firmen-Kernfelder**")
         core_fields = ['name', 'name_legal', 'address_street', 'address_house_number',
                       'address_zip', 'address_city', 'contact_email', 'contact_phone', 'contact_website']
 
@@ -113,7 +113,7 @@ if st.session_state.uploaded_data is not None and st.session_state.crm_api_key:
                     del st.session_state.field_mapping[current_mapping]
 
     with tabs[1]:
-        st.markdown("**Client-Specific Fields** (uses `/clients/:id` endpoint)")
+        st.markdown("**Kundenspezifische Felder** (verwendet `/clients/:id` Endpunkt)")
 
         for field in ['customer_number', 'payment_time_day_num', 'dunning_blocked',
                      'reference_number_required', 'datev_account']:
@@ -130,7 +130,7 @@ if st.session_state.uploaded_data is not None and st.session_state.crm_api_key:
                 del st.session_state.field_mapping[current_mapping]
 
     with tabs[2]:
-        st.markdown("**Supplier-Specific Fields** (uses `/suppliers/:id` endpoint)")
+        st.markdown("**Lieferantenspezifische Felder** (verwendet `/suppliers/:id` Endpunkt)")
 
         for field in ['discount_day_num', 'discount_percentage', 'comment_supplier']:
             current_mapping = next((col for col, f in st.session_state.field_mapping.items() if f == field), '')
