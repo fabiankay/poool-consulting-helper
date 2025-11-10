@@ -689,9 +689,9 @@ with col2:
         if uploaded_file is not None:
             try:
                 if uploaded_file.name.endswith('.csv'):
-                    df = pd.read_csv(uploaded_file)
+                    df = pd.read_csv(uploaded_file, dtype=str)
                 else:
-                    df = pd.read_excel(uploaded_file)
+                    df = pd.read_excel(uploaded_file, dtype=str)
 
                 st.session_state.uploaded_data = df
                 # Don't clear field_mapping on file upload - user might want to keep mappings

@@ -149,9 +149,9 @@ def render_file_uploader(operation_type: str = "import") -> Optional[pd.DataFram
     if uploaded_file is not None:
         try:
             if uploaded_file.name.endswith('.csv'):
-                df = pd.read_csv(uploaded_file)
+                df = pd.read_csv(uploaded_file, dtype=str)
             else:
-                df = pd.read_excel(uploaded_file)
+                df = pd.read_excel(uploaded_file, dtype=str)
 
             st.session_state.uploaded_data = df
             row_count = len(df)
@@ -205,18 +205,12 @@ def render_results_display(results: dict, operation_type: str = "import"):
     if successful:
         with st.expander(f"✅ Successful {operation_type.title()}s ({len(successful)})", expanded=True):
             success_df = pd.DataFrame(successful)
-            # Convert object columns to string to avoid PyArrow serialization issues
-            for col in success_df.select_dtypes(include=['object']).columns:
-                success_df[col] = success_df[col].astype(str)
             st.dataframe(success_df, use_container_width=True)
 
     # Failed records
     if failed:
         with st.expander(f"❌ Failed {operation_type.title()}s ({len(failed)})", expanded=True):
             failed_df = pd.DataFrame(failed)
-            # Convert object columns to string to avoid PyArrow serialization issues
-            for col in failed_df.select_dtypes(include=['object']).columns:
-                failed_df[col] = failed_df[col].astype(str)
             st.dataframe(failed_df, use_container_width=True)
 
 
@@ -320,10 +314,6 @@ def render_preview_matches(df: pd.DataFrame, field_mapping: dict, identifier_fie
                 st.metric("⚠️ Ungenaue Übereinstimmung", fuzzy_count)
             with col3:
                 st.metric("❌ Nicht gefunden", not_found_count)
-
-        # Convert all object columns to string to avoid PyArrow serialization issues with mixed types
-        for col in preview_df.select_dtypes(include=['object']).columns:
-            preview_df[col] = preview_df[col].astype(str)
 
         # Show preview table
         st.dataframe(preview_df, use_container_width=True)
@@ -434,18 +424,12 @@ def render_update_results(results: dict):
     if successful:
         with st.expander(f"✅ Erfolgreiche Aktualisierungen ({len(successful)})", expanded=True):
             success_df = pd.DataFrame(successful)
-            # Convert object columns to string to avoid PyArrow serialization issues
-            for col in success_df.select_dtypes(include=['object']).columns:
-                success_df[col] = success_df[col].astype(str)
             st.dataframe(success_df, use_container_width=True)
 
     # Failed updates
     if failed:
         with st.expander(f"❌ Fehlgeschlagene Aktualisierungen ({len(failed)})", expanded=True):
             failed_df = pd.DataFrame(failed)
-            # Convert object columns to string to avoid PyArrow serialization issues
-            for col in failed_df.select_dtypes(include=['object']).columns:
-                failed_df[col] = failed_df[col].astype(str)
             st.dataframe(failed_df, use_container_width=True)
 
     # Clear results button

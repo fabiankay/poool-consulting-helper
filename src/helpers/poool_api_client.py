@@ -86,24 +86,24 @@ class PooolAPIClient:
                     error_msgs = []
                     for field, msgs in errors.items():
                         error_msgs.append(f"{field}: {', '.join(msgs)}")
-                    return None, f"Validation errors: {'; '.join(error_msgs)}"
-                return None, f"Bad request: {error_data.get('message', 'Invalid data')}"
+                    return None, f"Validierungsfehler: {'; '.join(error_msgs)}"
+                return None, f"Ungültige Anfrage: {error_data.get('message', 'Ungültige Daten')}"
             except:
-                return None, "Bad request: Invalid data format"
+                return None, "Ungültige Anfrage: Ungültiges Datenformat"
         elif response.status_code == 401:
-            return None, "Authentication failed: Invalid or expired API key"
+            return None, "Authentifizierung fehlgeschlagen: Ungültiger oder abgelaufener API-Schlüssel"
         elif response.status_code == 403:
-            return None, f"Permission denied: Insufficient privileges to create {resource_type}s"
+            return None, f"Zugriff verweigert: Unzureichende Berechtigungen zum Erstellen von {resource_type}s"
         elif response.status_code == 429:
-            return None, "Rate limit exceeded: Please wait before retrying"
+            return None, "Ratenlimit überschritten: Bitte warten Sie, bevor Sie es erneut versuchen"
         elif response.status_code == 500:
-            return None, "Server error: Please try again later"
+            return None, "Serverfehler: Bitte versuchen Sie es später erneut"
         else:
             try:
                 error_data = response.json()
-                return None, f"API error ({response.status_code}): {error_data.get('message', 'Unknown error')}"
+                return None, f"API-Fehler ({response.status_code}): {error_data.get('message', 'Unbekannter Fehler')}"
             except:
-                return None, f"HTTP {response.status_code}: Unknown error"
+                return None, f"HTTP {response.status_code}: Unbekannter Fehler"
 
     def test_connection(self) -> Tuple[bool, str]:
         """Test API connection by trying to fetch contact types."""
@@ -111,22 +111,22 @@ class PooolAPIClient:
             response = requests.get(f"{self._base_url}/contact_types", headers=self._headers, timeout=10)
 
             if response.status_code == 200:
-                return True, "Connection successful"
+                return True, "Verbindung erfolgreich"
             elif response.status_code == 401:
-                return False, "Invalid API key"
+                return False, "Ungültiger API-Schlüssel"
             else:
-                return False, f"API returned status {response.status_code}"
+                return False, f"API gab Status {response.status_code} zurück"
 
         except requests.exceptions.Timeout:
-            return False, "Request timeout - please check your internet connection"
+            return False, "Anfrage-Timeout - bitte überprüfen Sie Ihre Internetverbindung"
         except requests.exceptions.ConnectionError:
-            return False, "Connection error - unable to reach Poool API"
+            return False, "Verbindungsfehler - Poool API nicht erreichbar"
         except requests.exceptions.HTTPError as e:
-            return False, f"HTTP error: {str(e)}"
+            return False, f"HTTP-Fehler: {str(e)}"
         except requests.exceptions.RequestException as e:
-            return False, f"Request failed: {str(e)}"
+            return False, f"Anfrage fehlgeschlagen: {str(e)}"
         except Exception as e:
-            return False, f"Unexpected error: {str(e)}"
+            return False, f"Unerwarteter Fehler: {str(e)}"
 
     def lookup_company_by_name(self, company_name: str) -> Tuple[Optional[int], Optional[str]]:
         """Look up a company ID by name."""
@@ -157,17 +157,17 @@ class PooolAPIClient:
 
                 # If no exact match, return the first partial match
                 if companies:
-                    return companies[0].get('id'), f"No exact match found, using closest match: {companies[0].get('name', 'Unknown')}"
+                    return companies[0].get('id'), f"Keine exakte Übereinstimmung gefunden, verwende nächste Übereinstimmung: {companies[0].get('name', 'Unbekannt')}"
 
-                return None, f"No company found with name: {company_name}"
+                return None, f"Keine Firma mit Name gefunden: {company_name}"
 
             elif response.status_code == 401:
-                return None, "Authentication failed: Invalid API key"
+                return None, "Authentifizierung fehlgeschlagen: Ungültiger API-Schlüssel"
             else:
-                return None, f"Company lookup failed: HTTP {response.status_code}"
+                return None, f"Firmensuche fehlgeschlagen: HTTP {response.status_code}"
 
         except Exception as e:
-            return None, f"Error looking up company: {str(e)}"
+            return None, f"Fehler beim Suchen der Firma: {str(e)}"
 
     def create_company(self, company_data: Dict) -> Tuple[Optional[Dict], Optional[str]]:
         """Create a company via API."""
@@ -184,7 +184,7 @@ class PooolAPIClient:
             return self._handle_api_response(response, "company")
 
         except Exception as e:
-            return None, f"Error creating company: {str(e)}"
+            return None, f"Fehler beim Erstellen der Firma: {str(e)}"
 
     def create_person(self, person_data: Dict) -> Tuple[Optional[Dict], Optional[str]]:
         """Create a person via API."""
@@ -200,7 +200,7 @@ class PooolAPIClient:
             return self._handle_api_response(response, "person")
 
         except Exception as e:
-            return None, f"Error creating person: {str(e)}"
+            return None, f"Fehler beim Erstellen der Person: {str(e)}"
 
     def get_all_tags(self) -> Tuple[Dict[str, int], Optional[str]]:
         """Retrieve all available tags and return name-to-ID mapping."""
@@ -215,7 +215,7 @@ class PooolAPIClient:
                 response = requests.get(url, headers=self._headers, params=params)
 
                 if response.status_code != 200:
-                    return {}, f"Failed to fetch tags: {response.status_code} - {response.text}"
+                    return {}, f"Fehler beim Abrufen der Tags: {response.status_code} - {response.text}"
 
                 data = response.json()
                 tags = data.get('data', [])
@@ -241,7 +241,7 @@ class PooolAPIClient:
                 page += 1
 
         except Exception as e:
-            return {}, f"Error fetching tags: {str(e)}"
+            return {}, f"Fehler beim Abrufen der Tags: {str(e)}"
 
         return tag_mapping, None
 
@@ -250,7 +250,7 @@ class PooolAPIClient:
         # First check if tag already exists
         existing_tags, error = self.get_all_tags()
         if error:
-            return None, f"Failed to check existing tags: {error}"
+            return None, f"Fehler beim Prüfen vorhandener Tags: {error}"
 
         # Case-insensitive lookup
         if tag_name.lower() in existing_tags:
@@ -295,12 +295,12 @@ class PooolAPIClient:
                 if tag_id:
                     return tag_id, None
                 else:
-                    return None, "Tag created but no ID returned"
+                    return None, "Tag erstellt, aber keine ID zurückgegeben"
             else:
-                return None, f"Failed to create tag: {response.status_code} - {response.text}"
+                return None, f"Fehler beim Erstellen des Tags: {response.status_code} - {response.text}"
 
         except Exception as e:
-            return None, f"Error creating tag: {str(e)}"
+            return None, f"Fehler beim Erstellen des Tags: {str(e)}"
 
     def update_company(self, company_id: int, company_data: Dict) -> Tuple[Optional[Dict], Optional[str]]:
         """Update a company via API."""
@@ -317,7 +317,7 @@ class PooolAPIClient:
             return self._handle_api_response(response, "company")
 
         except Exception as e:
-            return None, f"Error updating company: {str(e)}"
+            return None, f"Fehler beim Aktualisieren der Firma: {str(e)}"
 
     def update_client(self, client_id: int, client_data: Dict) -> Tuple[Optional[Dict], Optional[str]]:
         """Update client-specific data via API."""
@@ -332,7 +332,7 @@ class PooolAPIClient:
             return self._handle_api_response(response, "client")
 
         except Exception as e:
-            return None, f"Error updating client: {str(e)}"
+            return None, f"Fehler beim Aktualisieren des Kunden: {str(e)}"
 
     def update_supplier(self, supplier_id: int, supplier_data: Dict) -> Tuple[Optional[Dict], Optional[str]]:
         """Update supplier-specific data via API."""
@@ -347,7 +347,7 @@ class PooolAPIClient:
             return self._handle_api_response(response, "supplier")
 
         except Exception as e:
-            return None, f"Error updating supplier: {str(e)}"
+            return None, f"Fehler beim Aktualisieren des Lieferanten: {str(e)}"
 
     def update_person(self, person_id: int, person_data: Dict) -> Tuple[Optional[Dict], Optional[str]]:
         """Update a person via API."""
@@ -362,7 +362,7 @@ class PooolAPIClient:
             return self._handle_api_response(response, "person")
 
         except Exception as e:
-            return None, f"Error updating person: {str(e)}"
+            return None, f"Fehler beim Aktualisieren der Person: {str(e)}"
 
     def get_company_by_id(self, company_id: int) -> Tuple[Optional[Dict], Optional[str]]:
         """Get a specific company by ID."""
@@ -375,12 +375,12 @@ class PooolAPIClient:
                 data = response.json()
                 return data.get('data', {}), None
             elif response.status_code == 404:
-                return None, "Company not found"
+                return None, "Firma nicht gefunden"
             else:
-                return None, f"Failed to get company: HTTP {response.status_code}"
+                return None, f"Fehler beim Abrufen der Firma: HTTP {response.status_code}"
 
         except Exception as e:
-            return None, f"Error getting company: {str(e)}"
+            return None, f"Fehler beim Abrufen der Firma: {str(e)}"
 
     def search_companies_by_field(self, field: str, value: str) -> Tuple[List[Dict], Optional[str]]:
         """Search for companies by a specific field value."""
@@ -397,10 +397,10 @@ class PooolAPIClient:
                 data = response.json()
                 return data.get('data', []), None
             else:
-                return [], f"Search failed: HTTP {response.status_code}"
+                return [], f"Suche fehlgeschlagen: HTTP {response.status_code}"
 
         except Exception as e:
-            return [], f"Error searching companies: {str(e)}"
+            return [], f"Fehler beim Suchen der Firmen: {str(e)}"
 
     def get_person_by_id(self, person_id: int) -> Tuple[Optional[Dict], Optional[str]]:
         """Get a specific person by ID."""
@@ -413,12 +413,12 @@ class PooolAPIClient:
                 data = response.json()
                 return data.get('data', {}), None
             elif response.status_code == 404:
-                return None, "Person not found"
+                return None, "Person nicht gefunden"
             else:
-                return None, f"Failed to get person: HTTP {response.status_code}"
+                return None, f"Fehler beim Abrufen der Person: HTTP {response.status_code}"
 
         except Exception as e:
-            return None, f"Error getting person: {str(e)}"
+            return None, f"Fehler beim Abrufen der Person: {str(e)}"
 
     def search_persons_by_field(self, field: str, value: str) -> Tuple[List[Dict], Optional[str]]:
         """Search for persons by a specific field value."""
@@ -435,10 +435,10 @@ class PooolAPIClient:
                 data = response.json()
                 return data.get('data', []), None
             else:
-                return [], f"Search failed: HTTP {response.status_code}"
+                return [], f"Suche fehlgeschlagen: HTTP {response.status_code}"
 
         except Exception as e:
-            return [], f"Error searching persons: {str(e)}"
+            return [], f"Fehler beim Suchen der Personen: {str(e)}"
 
     def __str__(self) -> str:
         """String representation of the API client."""
