@@ -778,17 +778,19 @@ if st.session_state.uploaded_data is not None:
                 if imported_config['manual_tag_mappings']:
                     st.session_state.manual_tag_mappings = imported_config['manual_tag_mappings']
 
-                # Display messages
+                # Display messages and check for errors
+                has_errors = False
                 for message in messages:
-                    if message.startswith("Success:"):
-                        st.success(message[9:])
-                    elif message.startswith("Warning:"):
-                        st.warning(message[9:])
-                    elif message.startswith("Error:"):
-                        st.error(message[7:])
+                    if message.startswith("Success:") or message.startswith("Erfolg:"):
+                        st.success(message.split(":", 1)[1].strip())
+                    elif message.startswith("Warning:") or message.startswith("Warnung:"):
+                        st.warning(message.split(":", 1)[1].strip())
+                    elif message.startswith("Error:") or message.startswith("Fehler:"):
+                        st.error(message.split(":", 1)[1].strip())
+                        has_errors = True
 
-                if success:
-                    # Mark as processed and rerun to update UI
+                # Mark as processed if import was successful (no errors and got some mappings)
+                if not has_errors and imported_config['field_mapping']:
                     st.session_state.mapping_file_processed = True
                     st.rerun()
 
