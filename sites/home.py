@@ -51,10 +51,10 @@ with col3:
 
 st.markdown("---")
 
-# Kalkulation
-st.subheader("💰 Kalkulation")
+# Hilfswerkzeuge
+st.subheader("🛠️ Hilfswerkzeuge")
 
-col1, col2 = st.columns([1, 2])
+col1, col2 = st.columns([1, 1])
 
 with col1:
     st.markdown("**📊 Stundensatzkalkulation**")
@@ -67,22 +67,38 @@ with col1:
     if st.button("Öffnen →", key="btn_stundensatz", use_container_width=True):
         st.switch_page("sites/cost_calculator.py")
 
-st.markdown("---")
-
-# Hilfswerkzeuge
-st.subheader("🛠️ Hilfswerkzeuge")
-
-col1, col2 = st.columns([1, 2])
-
-with col1:
+with col2:
     st.markdown("**🧑‍💻 Personio**")
     st.markdown("""
-    - Mitarbeiter, Abwesenheiten, Anwesenheiten abrufen
+    - Mitarbeiter abrufen
+    - Abwesenheiten, Anwesenheiten abrufen
     - Export nach CSV/Excel
     - Datumsbereichsfilterung
     """)
     if st.button("Öffnen →", key="btn_personio", use_container_width=True):
         st.switch_page("sites/personio.py")
+
+st.markdown("---")
+
+# Analytics
+st.subheader("📈 Analytics")
+
+col1, col2 = st.columns([1, 1])
+
+with col1:
+    st.markdown("**🔍 Clustering**")
+    st.markdown("""
+    - Client-Segmentierung auf Basis von Finanzdaten
+    - K-Means Clustering-Algorithmus
+    - Prism-Datenbank Integration
+    - Automatische Tag-Erstellung in Poool CRM
+    """)
+    if st.button("Öffnen →", key="btn_clustering", use_container_width=True):
+        st.switch_page("sites/clustering.py")
+
+with col2:
+    # Placeholder for future analytics tools
+    pass
 
 st.markdown("---")
 st.markdown("Fragen, Ideen oder Feedback: [fabian.kainz@poool.cc](mailto:fabian.kainz@poool.cc)")

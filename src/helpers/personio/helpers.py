@@ -6,7 +6,7 @@ from the Personio HR API.
 """
 
 import pandas as pd
-from .personio_api_client import PersonioAPIClient
+from .api_client import PersonioAPIClient
 
 
 def create_personio_client(client_id: str, client_secret: str) -> PersonioAPIClient:

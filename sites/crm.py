@@ -13,7 +13,7 @@ from src.helpers.mapping_utils import (
     export_mapping_to_json,
     import_mapping_from_json
 )
-from src.components.crm_ui import render_environment_selector, render_api_configuration, render_wip_warning
+from src.components.crm import render_environment_selector, render_api_configuration, render_wip_warning
 
 st.set_page_config(
     page_title="CRM Import",
@@ -47,15 +47,14 @@ if 'mapping_file_processed' not in st.session_state:
 
 
 def _update_field_mapping(field: str, selected_column: str):
-    """Update field mapping, removing old mappings for the same field."""
-    # Remove old mapping for this field
-    for csv_col, api_field in list(st.session_state.field_mapping.items()):
-        if api_field == field:
-            del st.session_state.field_mapping[csv_col]
-
-    # Add new mapping if selected (and not empty string or "Select")
-    if selected_column and selected_column.strip() and selected_column.lower() != "select":
-        st.session_state.field_mapping[selected_column] = field
+    """Update field mapping for a given API field."""
+    # Remove mapping if empty/none selected
+    if not selected_column or not selected_column.strip() or selected_column.lower() == "select":
+        if field in st.session_state.field_mapping:
+            del st.session_state.field_mapping[field]
+    else:
+        # Map API field to CSV column (allows multiple API fields to use same CSV column)
+        st.session_state.field_mapping[field] = selected_column
 
 def _on_field_mapping_change(field: str):
     """Callback function triggered when a field mapping selectbox changes."""
@@ -115,255 +114,49 @@ def _get_field_examples():
         'company': 'Company name they work for'
     }
 
-def _render_field_mapping_selectbox(field: str, csv_columns: list, field_type: str):
-    """Render a selectbox for field mapping with consistent logic."""
-    current_mapping = get_current_mapping_for_field(field, st.session_state.field_mapping)
-    examples = _get_field_examples()
-
-    help_text = examples.get(field, f"Map CSV column to {field}")
-
-    # Calculate index safely
-    try:
-        default_index = csv_columns.index(current_mapping) if current_mapping and current_mapping in csv_columns else 0
-    except (ValueError, IndexError):
-        default_index = 0
-
-    # Create unique widget key
-    widget_key = f"selectbox_{field}"
-
-    # Render selectbox with on_change callback
-    st.selectbox(
-        f"{field}",
-        options=csv_columns,
-        index=default_index,
-        key=widget_key,
-        help=help_text,
-        on_change=_on_field_mapping_change,
-        args=(field,)
-    )
-
-def _show_relationship_preview(csv_columns: list):
-    """Show a preview of detected relationships based on current mapping."""
-    if not st.session_state.uploaded_data.empty:
-        # Get current client/supplier mappings
-        client_col = get_current_mapping_for_field('is_client', st.session_state.field_mapping)
-        supplier_col = get_current_mapping_for_field('is_supplier', st.session_state.field_mapping)
-
-        if client_col or supplier_col:
-            st.markdown("**Beziehungsvorschau** 🔍")
-
-            total_rows = len(st.session_state.uploaded_data)
-            if total_rows > 5000:
-                st.caption(f"📊 Großer Datensatz ({total_rows:,} Zeilen). Vorschau zeigt nur die ersten 3 Zeilen.")
-
-            preview_data = []
-            sample_rows = st.session_state.uploaded_data.head(3)
-
-            for idx, row in sample_rows.iterrows():
-                company_name = row.get(list(st.session_state.uploaded_data.columns)[0], f"Row {idx+1}")
-
-                # Check client status
-                client_status = "❌"
-                if client_col and client_col in row:
-                    client_val = str(row[client_col]).strip()
-                    if client_val and client_val.lower() not in ['false', '0', 'no']:
-                        client_status = "✅"
-
-                # Check supplier status
-                supplier_status = "❌"
-                if supplier_col and supplier_col in row:
-                    supplier_val = str(row[supplier_col]).strip()
-                    if supplier_val and supplier_val.lower() not in ['false', '0', 'no']:
-                        supplier_status = "✅"
-
-                preview_data.append({
-                    "Firma": company_name[:20] + "..." if len(str(company_name)) > 20 else company_name,
-                    "Kunde": client_status,
-                    "Lieferant": supplier_status
-                })
-
-            if preview_data:
-                preview_df = pd.DataFrame(preview_data)
-                st.dataframe(preview_df, use_container_width=True, hide_index=True)
-        else:
-            st.info("💡 Ordnen Sie Beziehungsspalten zu, um die Vorschau zu sehen")
-
-def _show_client_preview(csv_columns: list):
-    """Show a preview of detected client relationships based on current mapping."""
-    if not st.session_state.uploaded_data.empty:
-        client_col = get_current_mapping_for_field('is_client', st.session_state.field_mapping)
-
-        if client_col:
-            st.markdown("**Kundenvorschau** 💼")
-
-            preview_data = []
-            sample_rows = st.session_state.uploaded_data.head(3)
-
-            client_count = 0
-            for idx, row in sample_rows.iterrows():
-                company_name = row.get(list(st.session_state.uploaded_data.columns)[0], f"Row {idx+1}")
-
-                # Check client status
-                is_client = False
-                if client_col and client_col in row:
-                    client_val = str(row[client_col]).strip()
-                    if client_val and client_val.lower() not in ['false', '0', 'no']:
-                        is_client = True
-                        client_count += 1
-
-                if is_client:
-                    preview_data.append({
-                        "Kunde": company_name[:25] + "..." if len(str(company_name)) > 25 else company_name,
-                        "Status": "✅ Aktiver Kunde"
-                    })
-
-            if preview_data:
-                preview_df = pd.DataFrame(preview_data)
-                st.dataframe(preview_df, use_container_width=True, hide_index=True)
-                st.info(f"📊 {client_count} Kunden in Beispieldaten gefunden")
-            else:
-                st.warning("Keine Kunden in Beispieldaten erkannt")
-        else:
-            st.info("💡 Ordnen Sie die 'is_client'-Spalte zu, um die Vorschau zu sehen")
-
-def _show_supplier_preview(csv_columns: list):
-    """Show a preview of detected supplier relationships based on current mapping."""
-    if not st.session_state.uploaded_data.empty:
-        supplier_col = get_current_mapping_for_field('is_supplier', st.session_state.field_mapping)
-
-        if supplier_col:
-            st.markdown("**Lieferantenvorschau** 🏭")
-
-            preview_data = []
-            sample_rows = st.session_state.uploaded_data.head(3)
-
-            supplier_count = 0
-            for idx, row in sample_rows.iterrows():
-                company_name = row.get(list(st.session_state.uploaded_data.columns)[0], f"Row {idx+1}")
-
-                # Check supplier status
-                is_supplier = False
-                if supplier_col and supplier_col in row:
-                    supplier_val = str(row[supplier_col]).strip()
-                    if supplier_val and supplier_val.lower() not in ['false', '0', 'no']:
-                        is_supplier = True
-                        supplier_count += 1
-
-                if is_supplier:
-                    preview_data.append({
-                        "Lieferant": company_name[:25] + "..." if len(str(company_name)) > 25 else company_name,
-                        "Status": "✅ Aktiver Lieferant"
-                    })
-
-            if preview_data:
-                preview_df = pd.DataFrame(preview_data)
-                st.dataframe(preview_df, use_container_width=True, hide_index=True)
-                st.info(f"📊 {supplier_count} Lieferanten in Beispieldaten gefunden")
-            else:
-                st.warning("Keine Lieferanten in Beispieldaten erkannt")
-        else:
-            st.info("💡 Ordnen Sie die 'is_supplier'-Spalte zu, um die Vorschau zu sehen")
-
 def _render_field_mapping_section(required_fields: list, optional_fields: list, csv_columns: list):
     """Render the complete field mapping section with organized tabs for different field categories."""
-    # Organize fields by category
-    basic_fields = []
-    client_fields = []
-    supplier_fields = []
+    from src.helpers.crm import get_company_field_tabs, get_company_field_labels
+    from src.components.crm import FieldMappingBuilder
 
-    for field in optional_fields:
-        if field in ['is_client', 'customer_number', 'payment_time_day_num', 'comment_client',
-                    'send_bill_to_email_to', 'reference_number_required', 'dunning_blocked',
-                    'datev_account', 'leitweg_id', 'datev_is_client_collection']:
-            client_fields.append(field)
-        elif field in ['is_supplier', 'comment_supplier', 'discount_day_num', 'discount_percentage']:
-            supplier_fields.append(field)
-        else:
-            basic_fields.append(field)
+    # Get tab configuration and labels
+    field_tabs = get_company_field_tabs()
+    field_labels = get_company_field_labels()
 
-    # Create tabs for different field categories
-    tab1, tab2, tab3, tab4 = st.tabs(["📋 Basisinformationen", "💼 Kundeneinstellungen", "🏭 Lieferanteneinstellungen", "🏷️ Tag-Verwaltung"])
+    # Get field examples
+    examples = _get_field_examples()
 
-    with tab1:
-        col1, col2 = st.columns([1, 1])
-        with col1:
-            st.markdown("**Pflichtfelder** ⭐")
-            for field in required_fields:
-                _render_field_mapping_selectbox(field, csv_columns, "required")
+    # Create FieldMappingBuilder with labels
+    builder = FieldMappingBuilder(
+        csv_columns=csv_columns,
+        field_mapping_key='field_mapping',
+        field_examples=examples,
+        field_labels=field_labels,
+        on_change_callback=_on_field_mapping_change
+    )
 
-        with col2:
-            st.markdown("**Optionale Firmeninformationen**")
-            for field in basic_fields:
-                _render_field_mapping_selectbox(field, csv_columns, "basic_optional")
+    # Create tabs (7 field tabs + 1 tag management tab)
+    tab_names = list(field_tabs.keys()) + ["🏷️ Tag-Verwaltung"]
+    tabs = st.tabs(tab_names)
 
-    with tab2:
-        st.markdown("**Kundenbeziehungs-Konfiguration** 💼")
-        st.info("💡 Konfigurieren Sie Felder für Firmen, die Ihre **Kunden** sind (sie bezahlen Sie für Dienstleistungen)")
+    # Render each field tab
+    for idx, (tab_name, fields) in enumerate(field_tabs.items()):
+        with tabs[idx]:
+            # Use 2-column layout
+            if len(fields) > 1:
+                cols = st.columns(2)
+                for field_idx, field in enumerate(fields):
+                    col_idx = field_idx % 2
+                    with cols[col_idx]:
+                        builder.render_field_selectbox(field, key_prefix=f"{tab_name.lower().replace(' ', '_')}_{col_idx}", use_callback=True)
+            else:
+                # Single field - no columns needed
+                for field in fields:
+                    builder.render_field_selectbox(field, key_prefix=tab_name.lower().replace(' ', '_'), use_callback=True)
 
-        # Show relationship toggle and preview
-        col1, col2 = st.columns([1, 1])
-        with col1:
-            # Client relationship flag
-            if 'is_client' in client_fields:
-                _render_field_mapping_selectbox('is_client', csv_columns, "client")
-                client_fields.remove('is_client')  # Remove from list to avoid duplicate
-
-        with col2:
-            # Show client preview if flag is mapped
-            _show_client_preview(csv_columns)
-
-        # Client-specific configuration fields
-        st.markdown("**Kunden-Geschäftseinstellungen**")
-        col1, col2 = st.columns([1, 1])
-
-        with col1:
-            st.markdown("*Zahlung & Rechnungsstellung*")
-            payment_fields = ['customer_number', 'payment_time_day_num', 'send_bill_to_email_to',
-                            'reference_number_required', 'dunning_blocked']
-            for field in payment_fields:
-                if field in client_fields:
-                    _render_field_mapping_selectbox(field, csv_columns, "client_payment")
-
-        with col2:
-            st.markdown("*Buchhaltung & Compliance*")
-            accounting_fields = ['comment_client', 'datev_account', 'leitweg_id', 'datev_is_client_collection']
-            for field in accounting_fields:
-                if field in client_fields:
-                    _render_field_mapping_selectbox(field, csv_columns, "client_accounting")
-
-    with tab3:
-        st.markdown("**Lieferantenbeziehungs-Konfiguration** 🏭")
-        st.info("💡 Konfigurieren Sie Felder für Firmen, die Ihre **Lieferanten** sind (Sie bezahlen sie für Dienstleistungen/Waren)")
-
-        # Show relationship toggle and preview
-        col1, col2 = st.columns([1, 1])
-        with col1:
-            # Supplier relationship flag
-            if 'is_supplier' in supplier_fields:
-                _render_field_mapping_selectbox('is_supplier', csv_columns, "supplier")
-                supplier_fields.remove('is_supplier')  # Remove from list to avoid duplicate
-
-        with col2:
-            # Show supplier preview if flag is mapped
-            _show_supplier_preview(csv_columns)
-
-        # Supplier-specific configuration fields
-        st.markdown("**Lieferanten-Geschäftseinstellungen**")
-        col1, col2 = st.columns([1, 1])
-
-        with col1:
-            st.markdown("*Zahlungsbedingungen*")
-            for field in ['discount_day_num', 'discount_percentage']:
-                if field in supplier_fields:
-                    _render_field_mapping_selectbox(field, csv_columns, "supplier_payment")
-
-        with col2:
-            st.markdown("*Notizen & Kommentare*")
-            for field in ['comment_supplier']:
-                if field in supplier_fields:
-                    _render_field_mapping_selectbox(field, csv_columns, "supplier_notes")
-
-    with tab4:
+    # Tag Management tab (last tab)
+    tag_tab_idx = len(field_tabs)
+    with tabs[tag_tab_idx]:
         st.markdown("**🏷️ Tag-Verwaltung & Zuweisung**")
         st.info("💡 Tags helfen, Ihre Firmen zu kategorisieren und zu organisieren. Konfigurieren Sie die automatische Tag-Erkennung oder weisen Sie Tag-Spalten manuell zu.")
 
@@ -811,22 +604,6 @@ if st.session_state.uploaded_data is not None:
     with col4:
         mapped_count = len([v for v in st.session_state.field_mapping.values() if v and v != ""])
         st.metric("Zugeordnet", f"{mapped_count}/{len(all_fields)}")
-
-        # Debug info (remove later)
-        if 'debug_mapping' not in st.session_state:
-            st.session_state.debug_mapping = False
-
-        debug_enabled = st.checkbox("🔍 Debug mapping state",
-                                   value=st.session_state.debug_mapping,
-                                   key="debug_mapping_checkbox")
-
-        if debug_enabled != st.session_state.debug_mapping:
-            st.session_state.debug_mapping = debug_enabled
-
-        if st.session_state.debug_mapping:
-            st.write("**Current mappings:**", st.session_state.field_mapping)
-            st.write("**Mapped count:**", [v for v in st.session_state.field_mapping.values() if v and v != ""])
-            st.write("**Total fields:**", len(all_fields))
 
     # Render the field mapping section using refactored helper functions
     _render_field_mapping_section(required_fields, optional_fields, csv_columns)

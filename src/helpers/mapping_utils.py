@@ -16,15 +16,12 @@ def get_current_mapping_for_field(field: str, field_mapping: Dict[str, str]) -> 
 
     Args:
         field: API field name to look up
-        field_mapping: Dictionary mapping CSV columns to API fields
+        field_mapping: Dictionary mapping API fields to CSV columns
 
     Returns:
         CSV column name if mapped, empty string otherwise
     """
-    for csv_col, api_field in field_mapping.items():
-        if api_field == field:
-            return csv_col
-    return ''
+    return field_mapping.get(field, '')
 
 
 def export_mapping_to_json(field_mapping: Dict[str, str],
@@ -34,7 +31,7 @@ def export_mapping_to_json(field_mapping: Dict[str, str],
     Export field mapping configuration to JSON format.
 
     Args:
-        field_mapping: Dictionary mapping CSV columns to API fields
+        field_mapping: Dictionary mapping API fields to CSV columns
         final_tag_mappings: Optional dictionary of tag column mappings
         manual_tag_mappings: Optional dictionary of manual tag assignments
 
@@ -86,9 +83,9 @@ def import_mapping_from_json(json_content: str, csv_columns: List[str]) -> Tuple
             matched_mappings = {}
             missing_columns = []
 
-            for csv_col, api_field in field_mapping.items():
+            for api_field, csv_col in field_mapping.items():
                 if csv_col in available_columns:
-                    matched_mappings[csv_col] = api_field
+                    matched_mappings[api_field] = csv_col
                 else:
                     missing_columns.append(csv_col)
 

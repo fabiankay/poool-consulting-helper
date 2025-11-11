@@ -1,9 +1,0 @@
-Company Name,Is Client,Is Supplier,Tags,Customer Number,Payment Terms,Invoice Email,DATEV Account,Leitweg ID,Notes
-"Acme Corporation",true,false,"VIP, Enterprise, Marketing",CLI-001,30,billing@acme.de,1200,99ZZ-ACME12345,"Premium software development client"
-"Tech Solutions Ltd",false,true,"Supplier, IT Services, Verified",,,,,SUP001,"Reliable IT consulting supplier"
-"Global Manufacturing",true,true,"Client, Supplier, Large Enterprise",CLI-002,45,invoices@global-mfg.com,1210,99ZZ-GLOBAL56789,"Both client and supplier relationship"
-"StartUp Innovations",true,false,"Client, Startup, High Growth",CLI-003,14,billing@startup-innov.de,1220,99ZZ-STARTUP999,"Young innovative company"
-"Equipment Suppliers Inc",false,true,"Supplier, Equipment, Reliable",,,procurement@equipment-supply.co.uk,SUP002,,"UK-based equipment supplier"
-"MediaTech Solutions",true,false,"Client, Media, Creative",CLI-004,30,accounts@mediatech.it,1230,99ZZ-MEDIA4567,"Italian creative agency"
-"Delta Services AB",false,true,"Supplier, Consulting, Swedish",,,purchasing@deltaservices.se,SUP003,,"Swedish consulting firm"
-"Müller & Partner GmbH",true,false,"Client, German, Tax Advisory",CLI-005,30,rechnung@mueller-partner.de,1240,99ZZ-MUELLER789,"German tax advisory firm"

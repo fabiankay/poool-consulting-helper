@@ -142,7 +142,7 @@ if st.session_state.personio_client and is_client_valid():
                 null_or_empty = []
 
                 for _, row in mapping_df.iterrows():
-                    col_name = row['DataFrame Column']
+                    col_name = row['DataFrame-Spalte']
                     if col_name in st.session_state.employees_df.columns:
                         col_data = st.session_state.employees_df[col_name]
                         not_null_not_empty.append(
@@ -256,7 +256,7 @@ if st.session_state.personio_client and is_client_valid():
                 null_or_empty = []
 
                 for _, row in mapping_df.iterrows():
-                    col_name = row['DataFrame Column']
+                    col_name = row['DataFrame-Spalte']
                     if col_name in st.session_state.absences_df.columns:
                         col_data = st.session_state.absences_df[col_name]
                         not_null_not_empty.append(
@@ -374,7 +374,7 @@ if st.session_state.personio_client and is_client_valid():
                 null_or_empty = []
 
                 for _, row in mapping_df.iterrows():
-                    col_name = row['DataFrame Column']
+                    col_name = row['DataFrame-Spalte']
                     if col_name in st.session_state.attendances_df.columns:
                         col_data = st.session_state.attendances_df[col_name]
                         not_null_not_empty.append(

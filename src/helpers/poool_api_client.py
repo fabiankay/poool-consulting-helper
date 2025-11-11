@@ -552,6 +552,117 @@ class PooolAPIClient:
         except Exception as e:
             return [], f"Fehler beim Suchen der Personen: {str(e)}"
 
+    def get_all_companies(self) -> Tuple[List[Dict], Optional[str]]:
+        """
+        Fetch ALL companies with automatic pagination handling.
+
+        This method automatically handles pagination and fetches all companies
+        from the CRM, regardless of total count.
+
+        Returns:
+            Tuple of (companies_list, error_message)
+                companies_list: List of company dictionaries
+                error_message: None if successful, error string otherwise
+
+        Example:
+            companies, error = client.get_all_companies()
+            if error:
+                print(f"Error: {error}")
+            else:
+                print(f"Found {len(companies)} companies")
+        """
+        companies = []
+        page = 1
+
+        try:
+            while True:
+                response = requests.get(
+                    f"{self._base_url}/companies",
+                    headers=self._headers,
+                    params={"page": page, "per_page": 100},
+                    timeout=30
+                )
+
+                if response.status_code != 200:
+                    return [], f"Fehler beim Abrufen der Firmen: HTTP {response.status_code}"
+
+                data = response.json()
+                page_companies = data.get('data', [])
+
+                if not page_companies:
+                    break
+
+                companies.extend(page_companies)
+
+                # Check if there's a next page
+                links = data.get('links', {})
+                if not links.get('next'):
+                    break
+
+                page += 1
+
+            return companies, None
+
+        except Exception as e:
+            return [], f"Fehler beim Abrufen aller Firmen: {str(e)}"
+
+    def find_similar_companies_by_name(
+        self,
+        search_name: str,
+        cutoff: float = 0.8,
+        max_results: int = 5
+    ) -> Tuple[List[Dict], Optional[str]]:
+        """
+        Find companies with similar names using fuzzy string matching.
+
+        Uses Python's difflib to perform fuzzy string matching against all company
+        names in the CRM. Useful for deduplication and finding potential matches.
+
+        Args:
+            search_name: The company name to search for
+            cutoff: Minimum similarity ratio (0.0-1.0), default 0.8
+                   0.8 means 80% similarity required
+            max_results: Maximum number of results to return, default 5
+
+        Returns:
+            Tuple of (matching_companies, error_message)
+                matching_companies: List of company dicts sorted by similarity
+                error_message: None if successful, error string otherwise
+
+        Example:
+            matches, error = client.find_similar_companies_by_name("Acme Corp", cutoff=0.7)
+            if not error:
+                for company in matches:
+                    print(f"Found: {company['name']}")
+        """
+        from difflib import get_close_matches
+
+        # Fetch all companies
+        all_companies, error = self.get_all_companies()
+        if error:
+            return [], error
+
+        # Create name-to-company mapping (skip companies without names)
+        name_map = {}
+        for company in all_companies:
+            if name := company.get('name'):
+                name_map[name] = company
+
+        if not name_map:
+            return [], "Keine Firmen mit Namen gefunden"
+
+        # Find similar names using fuzzy matching
+        similar_names = get_close_matches(
+            search_name,
+            name_map.keys(),
+            n=max_results,
+            cutoff=cutoff
+        )
+
+        # Return matching companies in order of similarity
+        matches = [name_map[name] for name in similar_names]
+        return matches, None
+
     def __str__(self) -> str:
         """String representation of the API client."""
         env_info = self.environment_info

@@ -1,9 +1,0 @@
-First Name,Last Name,Email,Company,Tags,Position,Tag_VIP,Tag_Decision_Maker,Tag_Technical
-John,Smith,john.smith@acme.de,Acme Corporation,"VIP, Decision Maker",CEO,1,1,0
-Sarah,Johnson,sarah.j@techsolutions.co.uk,Tech Solutions Ltd,"Technical, Developer",CTO,0,1,1
-Hans,Mueller,h.mueller@global-mfg.com,Global Manufacturing,"Operations, Key Contact",Project Manager,0,0,0
-Emma,Brown,emma@startup-innov.de,StartUp Innovations,"Founder, VIP",Founder,1,1,1
-David,Wilson,d.wilson@equipment-supply.co.uk,Equipment Suppliers Inc,"Sales, Contact",Sales Director,0,0,0
-Maria,Garcia,m.garcia@mediatech.it,MediaTech Solutions,"Creative, Designer",Creative Director,0,1,0
-Klaus,Weber,k.weber@mueller-partner.de,Müller & Partner GmbH,"Partner, German",Partner,1,1,0
-Lisa,Andersson,l.andersson@deltaservices.se,Delta Services AB,"Procurement, Swedish",Procurement Manager,0,0,0

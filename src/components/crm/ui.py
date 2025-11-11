@@ -8,7 +8,7 @@ across different CRM operations.
 import streamlit as st
 import pandas as pd
 from typing import Tuple, Optional
-from .session_state import init_global_crm_state
+from ..common.session_state_manager import init_global_crm_state
 
 
 def render_wip_warning():

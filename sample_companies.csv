@@ -1,6 +1,0 @@
-Company Name,Legal Name,Street,House Number,ZIP Code,City,Phone,Email,Website,Tax Number,VAT Number,Is Client,Is Supplier,Notes
-Acme Corp,Acme Corporation GmbH,Hauptstraße,15,10115,Berlin,+49 30 12345678,info@acme.de,www.acme.de,12345678,DE123456789,true,false,Main client for software development
-Tech Solutions Ltd,Tech Solutions Limited,Baker Street,42,SW1A 1AA,London,+44 20 7946 0958,contact@techsolutions.co.uk,www.techsolutions.co.uk,87654321,GB987654321,false,true,IT consulting supplier
-Global Industries,Global Industries AG,Bahnhofstraße,8,80331,München,+49 89 98765432,hello@global-ind.com,www.global-industries.com,11223344,DE987654321,true,true,Both client and supplier
-StartUp Innovation,StartUp Innovation UG,Kreuzbergstraße,23,10965,Berlin,+49 30 55667788,team@startup-innov.de,startup-innovation.de,55667788,DE555666777,true,false,New client - web services
-Supplier Network Inc,Supplier Network Incorporated,Industrial Road,156,M1 5AN,Manchester,+44 161 123 4567,sales@supplier-net.co.uk,www.supplier-network.com,99887766,GB123987654,false,true,Equipment supplier
