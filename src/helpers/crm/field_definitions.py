@@ -196,7 +196,12 @@ def get_company_field_tabs() -> Dict[str, List[str]]:
     return {
         "Stammdaten": [
             "name", "name_legal", "name_token", "note",
-            "is_client", "is_supplier", "is_operator", "tags"
+            "is_client", "is_supplier"
+        ],
+        "Personendaten (EPUs)": [
+            "salutation", "title", "firstname", "middlename",
+            "lastname", "nickname", "position", "function",
+            "department", "birthday", "gender"
         ],
         "Adresse": [
             "address_street", "address_house_number", "address_zip",
@@ -205,23 +210,16 @@ def get_company_field_tabs() -> Dict[str, List[str]]:
         "Kontakt": [
             "contact_phone", "contact_email", "contact_website"
         ],
-        "Kontaktperson": [
-            "salutation", "title", "firstname", "middlename",
-            "lastname", "nickname", "position", "function",
-            "department", "birthday", "gender"
-        ],
         "Kunde": [
-            "customer_number", "payment_time_day_num", "comment_client",
+            "customer_number", "datev_account", "leitweg_id", "payment_time_day_num", "comment_client",
             "send_bill_to_email_to", "reference_number_required", "dunning_blocked"
         ],
         "Lieferant": [
-            "number", "comment_supplier", "comment_internal",
+            "number", "datev_account", "comment_supplier", "comment_internal",
             "discount_day_num", "discount_percentage"
         ],
-        "Compliance & Erweitert": [
-            "uid", "commercial_register", "jurisdiction", "management",
-            "data_privacy_number", "datev_account", "leitweg_id",
-            "datev_is_client_collection"
+        "Erweitert": [
+            "uid", "commercial_register", "jurisdiction", "management", "data_privacy_number"
         ]
     }
 

@@ -148,11 +148,11 @@ def _render_field_mapping_section(required_fields: list, optional_fields: list, 
                 for field_idx, field in enumerate(fields):
                     col_idx = field_idx % 2
                     with cols[col_idx]:
-                        builder.render_field_selectbox(field, key_prefix=f"{tab_name.lower().replace(' ', '_')}_{col_idx}", use_callback=True)
+                        builder.render_field_selectbox(field, key_prefix=f"{tab_name.lower().replace(' ', '_')}_{col_idx}", use_callback=False)
             else:
                 # Single field - no columns needed
                 for field in fields:
-                    builder.render_field_selectbox(field, key_prefix=tab_name.lower().replace(' ', '_'), use_callback=True)
+                    builder.render_field_selectbox(field, key_prefix=tab_name.lower().replace(' ', '_'), use_callback=False)
 
     # Tag Management tab (last tab)
     tag_tab_idx = len(field_tabs)
