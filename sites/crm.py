@@ -85,20 +85,25 @@ def _get_field_examples():
         'is_supplier': 'true/false or any value = true, empty = false',
 
         # Client-specific fields
-        'customer_number': 'Internal client number (e.g., "CLI-001", "C12345")',
-        'payment_time_day_num': 'Payment terms in days (e.g., "30", "14")',
+        'customer_number_client': 'Customer number for client role (e.g., "CLI-001", "C12345")',
+        'client_number': 'Client number (e.g., "001", "K123")',
+        'payment_time_day_num_client': 'Payment terms in days for client (e.g., "30", "14")',
         'comment_client': 'Client-specific notes and comments',
         'send_bill_to_email_to': 'Invoice email address (e.g., "billing@client.com")',
         'reference_number_required': '1/0 or true/false - require reference on invoices',
         'dunning_blocked': '1/0 or true/false - block dunning/reminder process',
+        'datev_account_client': 'DATEV accounting code for client (e.g., "1200", "KR001")',
 
         # Supplier-specific fields
+        'supplier_number': 'Supplier number (e.g., "L001", "SUP-123")',
+        'customer_number_supplier': 'Customer number for supplier role (e.g., "S-001")',
+        'payment_time_day_num_supplier': 'Payment terms in days for supplier (e.g., "30", "14")',
         'comment_supplier': 'Supplier-specific notes and comments',
         'discount_day_num': 'Early payment discount period in days (e.g., "14")',
         'discount_percentage': 'Early payment discount rate (e.g., "2.5", "1.0")',
+        'datev_account_supplier': 'DATEV accounting code for supplier (e.g., "1200", "KR001")',
 
         # German/EU specific
-        'datev_account': 'DATEV accounting code (e.g., "1200", "KR001")',
         'leitweg_id': 'German e-invoicing Leitweg ID (e.g., "99ZZ-123456789")',
         'datev_is_client_collection': '1/0 - DATEV client collection flag',
 

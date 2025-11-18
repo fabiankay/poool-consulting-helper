@@ -135,8 +135,11 @@ def prepare_company_data(row_data: Dict, field_mapping: Dict, client: Optional[P
         country_cache: Optional country cache for address processing
         original_row_data: Original uncleaned row data (needed for is_client/is_supplier empty value handling)
     """
+    from .field_definitions import get_field_api_name_mapping
+
     company_data = {}
     complex_fields = {}
+    field_name_mapping = get_field_api_name_mapping()
 
     # Use original_row_data for checking empty values, fallback to row_data if not provided
     check_data = original_row_data if original_row_data is not None else row_data
@@ -176,40 +179,43 @@ def prepare_company_data(row_data: Dict, field_mapping: Dict, client: Optional[P
 
         str_value = str(value).strip()
 
+        # Map internal field name to actual API field name if needed
+        actual_api_field = field_name_mapping.get(api_field, api_field)
+
         # Special handling for name_token - remove ALL spaces and append "abc" for testing
-        if api_field == 'name_token' and str_value:
+        if actual_api_field == 'name_token' and str_value:
             original_value = str_value
             str_value = str_value.replace(' ', '') + 'abc'
             print(f"DEBUG: name_token processed - original: '{value}', trimmed: '{original_value.replace(' ', '')}', final: '{str_value}'")
 
         # Debug logging for UID field
-        if api_field == 'uid' and str_value:
+        if actual_api_field == 'uid' and str_value:
             print(f"DEBUG: Processing UID field - csv_column: {csv_column}, value: {value}, str_value: {str_value}")
 
         # Handle different field types (is_client/is_supplier already handled above)
-        if api_field in ["reference_number_required", "dunning_blocked", "datev_is_client_collection"]:
+        if actual_api_field in ["reference_number_required", "dunning_blocked", "datev_is_client_collection"]:
             if str_value.lower() in ['true', '1', 'yes']:
-                company_data[api_field] = "1"
+                company_data[actual_api_field] = "1"
             elif str_value.lower() in ['false', '0', 'no']:
-                company_data[api_field] = "0"
+                company_data[actual_api_field] = "0"
             elif str_value:
-                company_data[api_field] = "1"
-        elif api_field in ["payment_time_day_num", "discount_day_num"]:
+                company_data[actual_api_field] = "1"
+        elif actual_api_field in ["payment_time_day_num", "discount_day_num"]:
             if str_value.isdigit():
-                company_data[api_field] = int(str_value)
-        elif api_field == "discount_percentage":
+                company_data[actual_api_field] = int(str_value)
+        elif actual_api_field == "discount_percentage":
             try:
-                company_data[api_field] = float(str_value.replace(',', '.'))
+                company_data[actual_api_field] = float(str_value.replace(',', '.'))
             except ValueError:
                 pass
-        elif api_field.startswith(("address_", "contact_")):
+        elif actual_api_field.startswith(("address_", "contact_")):
             if str_value:
-                complex_fields[api_field] = str_value
+                complex_fields[actual_api_field] = str_value
         elif str_value:
-            company_data[api_field] = str_value
+            company_data[actual_api_field] = str_value
             # Debug logging for UID field storage
-            if api_field == 'uid':
-                print(f"DEBUG: UID stored in company_data: {company_data[api_field]}")
+            if actual_api_field == 'uid':
+                print(f"DEBUG: UID stored in company_data: {company_data[actual_api_field]}")
 
     # Process complex fields if any exist
     if complex_fields:
