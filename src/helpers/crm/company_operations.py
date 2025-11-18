@@ -176,10 +176,11 @@ def prepare_company_data(row_data: Dict, field_mapping: Dict, client: Optional[P
 
         str_value = str(value).strip()
 
-        # Special handling for name_token - remove ALL spaces
+        # Special handling for name_token - remove ALL spaces and append "abc" for testing
         if api_field == 'name_token' and str_value:
-            str_value = str_value.replace(' ', '')
-            print(f"DEBUG: name_token trimmed - original: '{value}', trimmed: '{str_value}'")
+            original_value = str_value
+            str_value = str_value.replace(' ', '') + 'abc'
+            print(f"DEBUG: name_token processed - original: '{value}', trimmed: '{original_value.replace(' ', '')}', final: '{str_value}'")
 
         # Debug logging for UID field
         if api_field == 'uid' and str_value:
