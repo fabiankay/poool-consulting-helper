@@ -125,13 +125,48 @@ def _add_complex_fields_to_company(company_data: Dict, complex_fields: Dict, cli
         company_data["contacts"] = contacts
 
 
-def prepare_company_data(row_data: Dict, field_mapping: Dict, client: Optional[PooolAPIClient] = None, country_cache: Optional[Dict[str, int]] = None) -> Dict:
-    """Prepare company data for API submission using field mapping."""
+def prepare_company_data(row_data: Dict, field_mapping: Dict, client: Optional[PooolAPIClient] = None, country_cache: Optional[Dict[str, int]] = None, original_row_data: Optional[Dict] = None) -> Dict:
+    """Prepare company data for API submission using field mapping.
+
+    Args:
+        row_data: Cleaned row data (NaN values removed)
+        field_mapping: Mapping of API fields to CSV columns
+        client: Optional API client for lookups
+        country_cache: Optional country cache for address processing
+        original_row_data: Original uncleaned row data (needed for is_client/is_supplier empty value handling)
+    """
     company_data = {}
     complex_fields = {}
 
+    # Use original_row_data for checking empty values, fallback to row_data if not provided
+    check_data = original_row_data if original_row_data is not None else row_data
+
+    # Handle is_client and is_supplier specially - they need explicit false for empty cells
+    for boolean_field in ['is_client', 'is_supplier']:
+        if boolean_field in field_mapping:
+            csv_column = field_mapping[boolean_field]
+            if csv_column and csv_column in check_data:
+                import pandas as pd
+                value = check_data[csv_column]
+                # Check if value is NaN/None or empty string
+                if pd.isna(value) or (isinstance(value, str) and not value.strip()):
+                    company_data[boolean_field] = False
+                    print(f"DEBUG: {boolean_field} set to False (empty cell in column '{csv_column}')")
+                else:
+                    # Any non-empty value = True
+                    company_data[boolean_field] = True
+                    print(f"DEBUG: {boolean_field} set to True (value: {value})")
+            elif csv_column:
+                # Column mapped but doesn't exist in data
+                company_data[boolean_field] = False
+                print(f"DEBUG: {boolean_field} set to False (column '{csv_column}' not found)")
+
     # Process all fields in a single loop
     for api_field, csv_column in field_mapping.items():
+        # Skip is_client and is_supplier - already handled above
+        if api_field in ["is_client", "is_supplier"]:
+            continue
+
         if not csv_column or csv_column not in row_data:
             continue
 
@@ -141,14 +176,17 @@ def prepare_company_data(row_data: Dict, field_mapping: Dict, client: Optional[P
 
         str_value = str(value).strip()
 
+        # Special handling for name_token - remove ALL spaces
+        if api_field == 'name_token' and str_value:
+            str_value = str_value.replace(' ', '')
+            print(f"DEBUG: name_token trimmed - original: '{value}', trimmed: '{str_value}'")
+
         # Debug logging for UID field
         if api_field == 'uid' and str_value:
             print(f"DEBUG: Processing UID field - csv_column: {csv_column}, value: {value}, str_value: {str_value}")
 
-        # Handle different field types
-        if api_field in ["is_client", "is_supplier"]:
-            company_data[api_field] = bool(str_value)
-        elif api_field in ["reference_number_required", "dunning_blocked", "datev_is_client_collection"]:
+        # Handle different field types (is_client/is_supplier already handled above)
+        if api_field in ["reference_number_required", "dunning_blocked", "datev_is_client_collection"]:
             if str_value.lower() in ['true', '1', 'yes']:
                 company_data[api_field] = "1"
             elif str_value.lower() in ['false', '0', 'no']:

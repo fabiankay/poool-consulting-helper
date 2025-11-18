@@ -20,7 +20,8 @@ def process_single_import(client: PooolAPIClient, index: int, row_data: Dict, fi
 
         # Prepare data based on import type
         if import_type == 'companies':
-            prepared_data = prepare_company_data(clean_data, field_mapping, client, country_cache)
+            # Pass both cleaned and original data (original needed for is_client/is_supplier empty handling)
+            prepared_data = prepare_company_data(clean_data, field_mapping, client, country_cache, original_row_data=row_data)
 
             # Early validation
             if not prepared_data.get('name'):

@@ -207,8 +207,9 @@ def process_single_update(client: PooolAPIClient, index: int, row_data: Dict, fi
 
             # Prepare company data if any company fields exist
             if company_fields:
+                # Pass both cleaned and original data (original needed for is_client/is_supplier empty handling)
                 prepared_company_data = prepare_company_data(clean_data,
-                    {k: v for k, v in field_mapping.items() if k in company_fields}, client, country_cache)
+                    {k: v for k, v in field_mapping.items() if k in company_fields}, client, country_cache, original_row_data=row_data)
             else:
                 prepared_company_data = {}
 
