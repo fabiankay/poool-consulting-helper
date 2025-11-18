@@ -99,7 +99,7 @@ class FieldMappingBuilder:
                 key=widget_key,
                 help=help_text,
                 on_change=self.on_change_callback,
-                args=(field,)
+                args=(field, widget_key)
             )
             return None
         else:

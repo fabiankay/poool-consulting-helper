@@ -56,10 +56,9 @@ def _update_field_mapping(field: str, selected_column: str):
         # Map API field to CSV column (allows multiple API fields to use same CSV column)
         st.session_state.field_mapping[field] = selected_column
 
-def _on_field_mapping_change(field: str):
+def _on_field_mapping_change(field: str, widget_key: str):
     """Callback function triggered when a field mapping selectbox changes."""
     # Get the new value from session state (Streamlit stores widget values there)
-    widget_key = f"selectbox_{field}"
     if widget_key in st.session_state:
         selected_column = st.session_state[widget_key]
         _update_field_mapping(field, selected_column)
@@ -148,11 +147,11 @@ def _render_field_mapping_section(required_fields: list, optional_fields: list, 
                 for field_idx, field in enumerate(fields):
                     col_idx = field_idx % 2
                     with cols[col_idx]:
-                        builder.render_field_selectbox(field, key_prefix=f"{tab_name.lower().replace(' ', '_')}_{col_idx}", use_callback=False)
+                        builder.render_field_selectbox(field, key_prefix=f"{tab_name.lower().replace(' ', '_')}_{col_idx}", use_callback=True)
             else:
                 # Single field - no columns needed
                 for field in fields:
-                    builder.render_field_selectbox(field, key_prefix=tab_name.lower().replace(' ', '_'), use_callback=False)
+                    builder.render_field_selectbox(field, key_prefix=tab_name.lower().replace(' ', '_'), use_callback=True)
 
     # Tag Management tab (last tab)
     tag_tab_idx = len(field_tabs)
