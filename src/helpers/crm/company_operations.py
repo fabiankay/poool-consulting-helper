@@ -141,6 +141,10 @@ def prepare_company_data(row_data: Dict, field_mapping: Dict, client: Optional[P
 
         str_value = str(value).strip()
 
+        # Debug logging for UID field
+        if api_field == 'uid' and str_value:
+            print(f"DEBUG: Processing UID field - csv_column: {csv_column}, value: {value}, str_value: {str_value}")
+
         # Handle different field types
         if api_field in ["is_client", "is_supplier"]:
             company_data[api_field] = bool(str_value)
@@ -164,10 +168,19 @@ def prepare_company_data(row_data: Dict, field_mapping: Dict, client: Optional[P
                 complex_fields[api_field] = str_value
         elif str_value:
             company_data[api_field] = str_value
+            # Debug logging for UID field storage
+            if api_field == 'uid':
+                print(f"DEBUG: UID stored in company_data: {company_data[api_field]}")
 
     # Process complex fields if any exist
     if complex_fields:
         _add_complex_fields_to_company(company_data, complex_fields, client, country_cache)
+
+    # Final debug check for UID
+    if 'uid' in company_data:
+        print(f"DEBUG: Final company_data contains UID: {company_data.get('uid')}")
+    elif 'uid' in field_mapping:
+        print(f"DEBUG: UID was mapped but NOT in final company_data. field_mapping['uid'] = {field_mapping.get('uid')}")
 
     return company_data
 

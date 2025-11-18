@@ -21,7 +21,8 @@ def validate_import_data(df, field_mapping: Dict, import_type: str) -> Tuple[boo
     else:
         required_fields = ['firstname', 'lastname']
 
-    mapped_required = [field for field in field_mapping.values() if field in required_fields]
+    # field_mapping structure is {api_field: csv_column}
+    mapped_required = [api_field for api_field in field_mapping.keys() if api_field in required_fields]
     missing_required = [field for field in required_fields if field not in mapped_required]
 
     if missing_required:

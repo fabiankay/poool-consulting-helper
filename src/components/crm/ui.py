@@ -242,8 +242,8 @@ def render_mapping_summary(field_mapping: dict):
     st.markdown("### 📋 Aktuelle Zuordnungsübersicht")
 
     mapping_df = pd.DataFrame([
-        {"CSV-Spalte": csv_col, "API-Feld": api_field}
-        for csv_col, api_field in field_mapping.items()
+        {"API-Feld": api_field, "CSV-Spalte": csv_col}
+        for api_field, csv_col in field_mapping.items()
     ])
     st.dataframe(mapping_df, use_container_width=True)
 

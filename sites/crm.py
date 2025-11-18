@@ -398,7 +398,7 @@ def _check_for_internal_duplicates(df, field_mapping: dict, import_type: str) ->
         if import_type == 'companies':
             # Check for duplicate company names
             name_col = None
-            for csv_col, api_field in field_mapping.items():
+            for api_field, csv_col in field_mapping.items():
                 if api_field == 'name':
                     name_col = csv_col
                     break
@@ -413,7 +413,7 @@ def _check_for_internal_duplicates(df, field_mapping: dict, import_type: str) ->
         else:  # persons
             # Check for duplicate person combinations (firstname + lastname + email)
             firstname_col = lastname_col = email_col = None
-            for csv_col, api_field in field_mapping.items():
+            for api_field, csv_col in field_mapping.items():
                 if api_field == 'firstname':
                     firstname_col = csv_col
                 elif api_field == 'lastname':
@@ -610,9 +610,9 @@ if st.session_state.uploaded_data is not None:
     with st.expander("📋 Aktuelle Zuordnung", expanded=False):
         if st.session_state.field_mapping:
             mapping_df = pd.DataFrame([
-                {"CSV-Spalte": csv_col, "API-Feld": api_field}
-                for csv_col, api_field in st.session_state.field_mapping.items()
-                if api_field
+                {"API-Feld": api_field, "CSV-Spalte": csv_col}
+                for api_field, csv_col in st.session_state.field_mapping.items()
+                if csv_col
             ])
             st.dataframe(mapping_df, use_container_width=True, hide_index=True)
         else:
@@ -620,8 +620,8 @@ if st.session_state.uploaded_data is not None:
 
     # Check if ALL required fields are mapped
     mapped_required_fields = set(
-        api_field for csv_col, api_field in st.session_state.field_mapping.items()
-        if api_field in required_fields
+        api_field for api_field, csv_col in st.session_state.field_mapping.items()
+        if api_field in required_fields and csv_col and csv_col.strip()
     )
     required_mapped = len(mapped_required_fields) == len(required_fields)
 
