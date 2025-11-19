@@ -146,7 +146,7 @@ def render_employee_groups_form() -> List[EmployeeGroup]:
 
             with col3:
                 social_sec = st.number_input(
-                    "Sozialversicherung AG (%)",
+                    "Arbeitgeberkosten (%)",
                     min_value=0.0,
                     max_value=50.0,
                     step=1.0,
