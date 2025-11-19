@@ -192,6 +192,12 @@ class HourlyRateCalculator:
 
         total_personnel_cost = personnel_cost_per_employee * group.count
 
+        if productive_hours == 0:
+            raise ValueError(
+                f"Produktive Stunden können nicht 0 sein. "
+                f"Prüfen Sie Urlaubstage, Krankheitstage und Produktivität für Gruppe '{group.name}'"
+            )
+
         cost_rate = personnel_cost_per_employee / productive_hours
 
         return {

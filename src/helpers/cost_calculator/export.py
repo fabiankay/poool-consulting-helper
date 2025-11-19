@@ -33,7 +33,7 @@ def export_to_excel(
     """
     output = BytesIO()
 
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+    with pd.ExcelWriter(output, engine='xlsxwriter', engine_kwargs={'options': {'nan_inf_to_errors': True}}) as writer:
         workbook = writer.book
 
         # Define formats
@@ -117,11 +117,13 @@ def export_to_excel(
         worksheet_kpi.write('B1', 'Wert', header_format)
 
         # Apply currency format to currency rows
-        for row_idx in [5, 6, 7, 9, 10]:
+        # Note: df_kpi has indices 0-10 (11 rows), since we excluded the header with kpi_data[1:]
+        # Original kpi_data rows: 5,6,7,9,10 -> df_kpi rows: 4,5,6,8,9
+        for row_idx in [4, 5, 6, 8, 9]:
             worksheet_kpi.write(row_idx + 1, 1, df_kpi.iloc[row_idx]['Wert'], currency_format)
 
-        # Apply percent format to percent row
-        worksheet_kpi.write(11 + 1, 1, df_kpi.iloc[11]['Wert'], percent_format)
+        # Apply percent format to percent row (original row 11 -> df_kpi row 10)
+        worksheet_kpi.write(10 + 1, 1, df_kpi.iloc[10]['Wert'], percent_format)
 
         # ===== Sheet 3: Details per Group =====
         for idx, detail in enumerate(calculation_details):

@@ -60,7 +60,7 @@ def dataframe_to_excel(df: pd.DataFrame,
         Excel file as bytes
     """
     output = BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+    with pd.ExcelWriter(output, engine='xlsxwriter', engine_kwargs={'options': {'nan_inf_to_errors': True}}) as writer:
         df.to_excel(writer, index=index, sheet_name=sheet_name)
     output.seek(0)
     return output.getvalue()

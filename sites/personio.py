@@ -48,7 +48,7 @@ def is_client_valid():
 def create_excel_download(df):
     """Create Excel file in memory for download"""
     output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+    with pd.ExcelWriter(output, engine='xlsxwriter', engine_kwargs={'options': {'nan_inf_to_errors': True}}) as writer:
         df.to_excel(writer, index=False, sheet_name='Data')
     output.seek(0)
     return output.getvalue()

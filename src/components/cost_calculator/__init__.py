@@ -14,6 +14,11 @@ from .ui import (
     render_plausibility_checks,
     create_cost_distribution_chart,
     create_group_comparison_chart,
+    create_cost_waterfall_chart,
+    create_revenue_vs_cost_chart,
+    create_personnel_breakdown_chart,
+    create_sensitivity_analysis_chart,
+    render_apportion_mapping,
 )
 
 __all__ = [
@@ -26,4 +31,9 @@ __all__ = [
     'render_plausibility_checks',
     'create_cost_distribution_chart',
     'create_group_comparison_chart',
+    'create_cost_waterfall_chart',
+    'create_revenue_vs_cost_chart',
+    'create_personnel_breakdown_chart',
+    'create_sensitivity_analysis_chart',
+    'render_apportion_mapping',
 ]

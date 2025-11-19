@@ -81,6 +81,69 @@ def get_offer_data(_conn: SQLConnection, start_date: datetime.date, end_date: da
     return df
 
 
+@st.cache_data
+def get_overhead_costs_by_apportion(_conn: SQLConnection, start_date: datetime.date, end_date: datetime.date) -> pd.DataFrame:
+    """
+    Get overhead costs grouped by data_invoice_position_apportion field from accounts_payable table.
+
+    Args:
+        _conn: Streamlit SQL connection to Prism database
+        start_date: Start date for filtering
+        end_date: End date for filtering
+
+    Returns:
+        DataFrame with columns: data_invoice_position_apportion, total_cost
+    """
+    query = f"""
+            SELECT
+                data_invoice_position_apportion,
+                SUM(data_invoice_position_netto::numeric) as total_cost
+            FROM
+                accounts_payable
+            WHERE
+                data_day_date BETWEEN '{start_date}' AND '{end_date}'
+                AND data_invoice_position_apportion IS NOT NULL
+            GROUP BY
+                data_invoice_position_apportion
+            ORDER BY
+                data_invoice_position_apportion;
+            """
+    df = _conn.query(query)
+    return df
+
+
+@st.cache_data
+def get_productivity_metrics(_conn: SQLConnection, start_date: datetime.date, end_date: datetime.date) -> pd.DataFrame:
+    """
+    Get productivity metrics from timetrack_days table including vacation, sick days, and working hours.
+
+    Args:
+        _conn: Streamlit SQL connection to Prism database
+        start_date: Start date for filtering
+        end_date: End date for filtering
+
+    Returns:
+        DataFrame with aggregated productivity metrics
+    """
+    query = f"""
+            SELECT
+                COUNT(DISTINCT data_employee_id) as total_employees,
+                AVG(CASE WHEN data_day_type = 'vacation' THEN 1 ELSE 0 END *
+                    COUNT(*) OVER ()) as avg_vacation_days,
+                AVG(CASE WHEN data_day_type = 'sick' THEN 1 ELSE 0 END *
+                    COUNT(*) OVER ()) as avg_sick_days,
+                AVG(data_hours_tracked::numeric) as avg_hours_per_day,
+                SUM(CASE WHEN data_is_billable = true THEN data_hours_tracked::numeric ELSE 0 END) /
+                    NULLIF(SUM(data_hours_tracked::numeric), 0) * 100 as productivity_percent
+            FROM
+                timetrack_days
+            WHERE
+                data_day_date BETWEEN '{start_date}' AND '{end_date}';
+            """
+    df = _conn.query(query)
+    return df
+
+
 @st.cache_data(show_spinner=False)
 def create_clustering_df(
     username: str,

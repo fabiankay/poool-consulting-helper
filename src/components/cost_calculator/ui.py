@@ -7,7 +7,8 @@ Follows existing app patterns from crm_ui.py
 
 import streamlit as st
 import pandas as pd
-import altair as alt
+import plotly.graph_objects as go
+import plotly.express as px
 from typing import List, Dict, Optional, Tuple
 from src.helpers.cost_calculator import (
     EmployeeGroup,
@@ -242,32 +243,36 @@ def render_overhead_costs_form() -> OverheadCosts:
         office_costs = st.number_input(
             "Raumkosten (€/Jahr)",
             min_value=0.0,
-            value=24000.0,
+            value=st.session_state.get('office_costs', 24000.0),
             step=1000.0,
+            key='office_costs',
             help="Miete, Nebenkosten, etc."
         )
 
         it_infrastructure = st.number_input(
             "IT-Infrastruktur (€/Jahr)",
             min_value=0.0,
-            value=15000.0,
+            value=st.session_state.get('it_infrastructure', 15000.0),
             step=1000.0,
+            key='it_infrastructure',
             help="Server, Software-Lizenzen, Hardware"
         )
 
         office_supplies = st.number_input(
             "Büromaterial (€/Jahr)",
             min_value=0.0,
-            value=3000.0,
+            value=st.session_state.get('office_supplies', 3000.0),
             step=500.0,
+            key='office_supplies',
             help="Verbrauchsmaterial, Kleingeräte"
         )
 
         insurance = st.number_input(
             "Versicherungen (€/Jahr)",
             min_value=0.0,
-            value=5000.0,
+            value=st.session_state.get('insurance', 5000.0),
             step=500.0,
+            key='insurance',
             help="Betriebshaftpflicht, Rechtsschutz, etc."
         )
 
@@ -275,24 +280,27 @@ def render_overhead_costs_form() -> OverheadCosts:
         marketing = st.number_input(
             "Marketing & Vertrieb (€/Jahr)",
             min_value=0.0,
-            value=10000.0,
+            value=st.session_state.get('marketing', 10000.0),
             step=1000.0,
+            key='marketing',
             help="Werbung, Events, Kundenakquise"
         )
 
         administration = st.number_input(
             "Verwaltungskosten (€/Jahr)",
             min_value=0.0,
-            value=8000.0,
+            value=st.session_state.get('administration', 8000.0),
             step=1000.0,
+            key='administration',
             help="Buchhaltung, Steuerberater, Rechtsanwalt"
         )
 
         other = st.number_input(
             "Sonstige Kosten (€/Jahr)",
             min_value=0.0,
-            value=0.0,
+            value=st.session_state.get('other', 0.0),
             step=500.0,
+            key='other',
             help="Alle weiteren Gemeinkosten"
         )
 
@@ -562,15 +570,15 @@ def render_plausibility_checks(plausibility: Dict):
 # VISUALIZATIONS
 # ============================================================================
 
-def create_cost_distribution_chart(overhead: OverheadCosts) -> alt.Chart:
+def create_cost_distribution_chart(overhead: OverheadCosts) -> go.Figure:
     """
-    Create pie chart for overhead cost distribution
+    Create pie chart for overhead cost distribution using Plotly
 
     Args:
         overhead: OverheadCosts object
 
     Returns:
-        Altair chart
+        Plotly figure
     """
     # Prepare data
     cost_dict = overhead.as_dict()
@@ -584,64 +592,432 @@ def create_cost_distribution_chart(overhead: OverheadCosts) -> alt.Chart:
         return None
 
     # Create chart
-    chart = alt.Chart(data).mark_arc().encode(
-        theta=alt.Theta(field="Betrag", type="quantitative"),
-        color=alt.Color(field="Kategorie", type="nominal", legend=alt.Legend(title="Kostenart")),
-        tooltip=[
-            alt.Tooltip("Kategorie:N", title="Kostenart"),
-            alt.Tooltip("Betrag:Q", title="Betrag (€)", format=",.2f")
-        ]
-    ).properties(
+    fig = go.Figure(data=[go.Pie(
+        labels=data['Kategorie'],
+        values=data['Betrag'],
+        hovertemplate='<b>%{label}</b><br>Betrag: €%{value:,.2f}<br>Anteil: %{percent}<extra></extra>',
+        textinfo='label+percent',
+        textposition='auto',
+    )])
+
+    fig.update_layout(
         title="Gemeinkostenverteilung",
-        width=400,
-        height=400
+        showlegend=True,
+        height=500,
+        margin=dict(t=50, b=20, l=20, r=20)
     )
 
-    return chart
+    return fig
 
 
-def create_group_comparison_chart(df: pd.DataFrame) -> alt.Chart:
+def create_group_comparison_chart(df: pd.DataFrame) -> go.Figure:
     """
-    Create bar chart comparing hourly rates across employee groups
+    Create bar chart comparing hourly rates across employee groups using Plotly
 
     Args:
         df: Results DataFrame
 
     Returns:
-        Altair chart
+        Plotly figure
     """
     # Prepare data
-    data = df[['Mitarbeitergruppe', 'Kostenstundensatz (€/h)', 'Vollkostensatz (€/h)', 'Verkaufsstundensatz (€/h)']].copy()
-
-    # Melt for grouped bar chart
-    data_melted = data.melt(
-        id_vars=['Mitarbeitergruppe'],
-        var_name='Stundensatzart',
-        value_name='Betrag'
-    )
-
-    # Shorten labels
-    data_melted['Stundensatzart'] = data_melted['Stundensatzart'].replace({
-        'Kostenstundensatz (€/h)': 'Kosten',
-        'Vollkostensatz (€/h)': 'Vollkosten',
-        'Verkaufsstundensatz (€/h)': 'Verkauf'
-    })
+    groups = df['Mitarbeitergruppe'].tolist()
+    cost_rates = df['Kostenstundensatz (€/h)'].tolist()
+    full_cost_rates = df['Vollkostensatz (€/h)'].tolist()
+    sales_rates = df['Verkaufsstundensatz (€/h)'].tolist()
 
     # Create chart
-    chart = alt.Chart(data_melted).mark_bar().encode(
-        x=alt.X('Mitarbeitergruppe:N', title='Mitarbeitergruppe', axis=alt.Axis(labelAngle=-45)),
-        y=alt.Y('Betrag:Q', title='Stundensatz (€/h)'),
-        color=alt.Color('Stundensatzart:N', title='Stundensatzart', scale=alt.Scale(scheme='category10')),
-        xOffset='Stundensatzart:N',
-        tooltip=[
-            alt.Tooltip('Mitarbeitergruppe:N'),
-            alt.Tooltip('Stundensatzart:N', title='Art'),
-            alt.Tooltip('Betrag:Q', title='Betrag (€/h)', format='.2f')
-        ]
-    ).properties(
+    fig = go.Figure(data=[
+        go.Bar(name='Kosten', x=groups, y=cost_rates, text=[f'€{v:.2f}' for v in cost_rates], textposition='auto'),
+        go.Bar(name='Vollkosten', x=groups, y=full_cost_rates, text=[f'€{v:.2f}' for v in full_cost_rates], textposition='auto'),
+        go.Bar(name='Verkauf', x=groups, y=sales_rates, text=[f'€{v:.2f}' for v in sales_rates], textposition='auto')
+    ])
+
+    fig.update_layout(
         title="Stundensatzvergleich nach Mitarbeitergruppe",
-        width=600,
-        height=400
+        xaxis_title="Mitarbeitergruppe",
+        yaxis_title="Stundensatz (€/h)",
+        barmode='group',
+        height=500,
+        hovermode='x unified',
+        showlegend=True,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
 
-    return chart
+    return fig
+
+
+def create_cost_waterfall_chart(calculation_details: List[Dict], pricing_params: PricingParameters) -> go.Figure:
+    """
+    Create waterfall chart showing cost build-up from base cost to sales rate
+
+    Args:
+        calculation_details: List of calculation details per group
+        pricing_params: Pricing parameters (profit, risk, discount)
+
+    Returns:
+        Plotly figure
+    """
+    # Use first group as example (or could show average)
+    if not calculation_details:
+        return None
+
+    # Average across all groups for a representative view
+    base_cost = sum(d['cost']['cost_rate'] for d in calculation_details) / len(calculation_details)
+    overhead = sum(d['full_cost']['overhead_amount_per_hour'] for d in calculation_details) / len(calculation_details)
+    full_cost = sum(d['full_cost']['full_cost_rate'] for d in calculation_details) / len(calculation_details)
+
+    # Calculate profit, risk, discount amounts
+    profit_amount = full_cost * (pricing_params.profit_margin_percent / 100)
+    risk_amount = (full_cost + profit_amount) * (pricing_params.risk_surcharge_percent / 100)
+    before_discount = full_cost + profit_amount + risk_amount
+    discount_amount = before_discount * (pricing_params.discount_percent / 100)
+    final_rate = before_discount - discount_amount
+
+    # Create waterfall
+    fig = go.Figure(go.Waterfall(
+        name="Kostenaufbau",
+        orientation="v",
+        measure=["absolute", "relative", "relative", "relative", "relative", "total"],
+        x=["Kosten-<br>stundensatz", "Gemein-<br>kosten", "Gewinn-<br>marge", "Risiko-<br>zuschlag", "Rabatt", "Verkaufs-<br>preis"],
+        textposition="outside",
+        text=[f"€{base_cost:.2f}", f"+€{overhead:.2f}",
+              f"+€{profit_amount:.2f}", f"+€{risk_amount:.2f}", f"-€{discount_amount:.2f}", f"€{final_rate:.2f}"],
+        y=[base_cost, overhead, profit_amount, risk_amount, -discount_amount, final_rate],
+        connector={"line": {"color": "rgb(63, 63, 63)"}},
+        increasing={"marker": {"color": "#2ecc71"}},
+        decreasing={"marker": {"color": "#e74c3c"}},
+        totals={"marker": {"color": "#3498db"}}
+    ))
+
+    fig.update_layout(
+        title="Kostenaufbau: Von Basiskosten zum Verkaufspreis (Durchschnitt)",
+        yaxis_title="Stundensatz (€/h)",
+        showlegend=False,
+        height=500,
+        margin=dict(t=50, b=100)
+    )
+
+    return fig
+
+
+def create_revenue_vs_cost_chart(plausibility: Dict) -> go.Figure:
+    """
+    Create chart comparing revenue vs costs with contribution margin
+
+    Args:
+        plausibility: Plausibility check data with financial metrics
+
+    Returns:
+        Plotly figure
+    """
+    personnel_cost = plausibility['total_personnel_cost']
+    overhead_cost = plausibility['overhead_costs']
+    total_cost = plausibility['total_cost']
+    revenue = plausibility['total_revenue']
+    contribution_margin = plausibility['contribution_margin']
+
+    # Create stacked bar for costs
+    fig = go.Figure()
+
+    fig.add_trace(go.Bar(
+        name='Personalkosten',
+        x=['Kosten', 'Umsatz'],
+        y=[personnel_cost, 0],
+        marker_color='#3498db',
+        text=[f'€{personnel_cost:,.0f}', ''],
+        textposition='inside'
+    ))
+
+    fig.add_trace(go.Bar(
+        name='Gemeinkosten',
+        x=['Kosten', 'Umsatz'],
+        y=[overhead_cost, 0],
+        marker_color='#9b59b6',
+        text=[f'€{overhead_cost:,.0f}', ''],
+        textposition='inside'
+    ))
+
+    fig.add_trace(go.Bar(
+        name='Deckungsbeitrag',
+        x=['Kosten', 'Umsatz'],
+        y=[0, contribution_margin],
+        marker_color='#2ecc71',
+        text=['', f'€{contribution_margin:,.0f}'],
+        textposition='inside'
+    ))
+
+    fig.add_trace(go.Bar(
+        name='Gesamtkosten (Basis)',
+        x=['Kosten', 'Umsatz'],
+        y=[0, total_cost],
+        marker_color='#95a5a6',
+        text=['', f'€{total_cost:,.0f}'],
+        textposition='inside',
+        showlegend=True
+    ))
+
+    # Add contribution margin percentage as annotation
+    fig.add_annotation(
+        x=1,
+        y=revenue + revenue * 0.05,
+        text=f"Deckungsbeitrag: {plausibility['contribution_margin_percent']:.1f}%",
+        showarrow=True,
+        arrowhead=2,
+        arrowsize=1,
+        arrowwidth=2,
+        arrowcolor="#2ecc71",
+        font=dict(size=12, color="#2ecc71", family="Arial Black"),
+        bgcolor="white",
+        bordercolor="#2ecc71",
+        borderwidth=2,
+        borderpad=4
+    )
+
+    fig.update_layout(
+        title="Gesamtkosten vs. Erwarteter Umsatz",
+        yaxis_title="Betrag (€/Jahr)",
+        barmode='stack',
+        height=500,
+        showlegend=True,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        hovermode='x unified'
+    )
+
+    return fig
+
+
+def create_personnel_breakdown_chart(calculation_details: List[Dict]) -> go.Figure:
+    """
+    Create stacked horizontal bar showing personnel cost breakdown per group
+
+    Args:
+        calculation_details: List of calculation details per group
+
+    Returns:
+        Plotly figure
+    """
+    if not calculation_details:
+        return None
+
+    # Extract data
+    groups = [d['group_name'] for d in calculation_details]
+    base_salaries = [d['cost']['annual_salary_gross'] * d['cost']['employee_count']
+                     for d in calculation_details]
+    social_security = [d['cost']['social_security'] * d['cost']['employee_count']
+                       for d in calculation_details]
+    special_payments = [d['cost']['special_payments'] * d['cost']['employee_count']
+                        for d in calculation_details]
+
+    # Create chart
+    fig = go.Figure()
+
+    fig.add_trace(go.Bar(
+        name='Bruttogehalt',
+        y=groups,
+        x=base_salaries,
+        orientation='h',
+        marker_color='#3498db',
+        text=[f'€{v:,.0f}' for v in base_salaries],
+        textposition='inside',
+        hovertemplate='<b>Bruttogehalt</b><br>€%{x:,.2f}<extra></extra>'
+    ))
+
+    fig.add_trace(go.Bar(
+        name='Sozialversicherung',
+        y=groups,
+        x=social_security,
+        orientation='h',
+        marker_color='#e67e22',
+        text=[f'€{v:,.0f}' for v in social_security],
+        textposition='inside',
+        hovertemplate='<b>Sozialversicherung</b><br>€%{x:,.2f}<extra></extra>'
+    ))
+
+    fig.add_trace(go.Bar(
+        name='Sonderzahlungen',
+        y=groups,
+        x=special_payments,
+        orientation='h',
+        marker_color='#9b59b6',
+        text=[f'€{v:,.0f}' for v in special_payments],
+        textposition='inside',
+        hovertemplate='<b>Sonderzahlungen</b><br>€%{x:,.2f}<extra></extra>'
+    ))
+
+    fig.update_layout(
+        title="Personalkostenaufschlüsselung nach Gruppe",
+        xaxis_title="Gesamtkosten pro Gruppe (€/Jahr)",
+        yaxis_title="Mitarbeitergruppe",
+        barmode='stack',
+        height=max(400, len(groups) * 80),
+        showlegend=True,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        hovermode='y unified'
+    )
+
+    return fig
+
+
+def create_sensitivity_analysis_chart(calculation_details: List[Dict], pricing_params: PricingParameters,
+                                       overhead_percent: float) -> go.Figure:
+    """
+    Create sensitivity analysis showing impact of parameter changes on sales rate
+
+    Args:
+        calculation_details: List of calculation details per group
+        pricing_params: Current pricing parameters
+        overhead_percent: Current overhead percentage
+
+    Returns:
+        Plotly figure
+    """
+    if not calculation_details:
+        return None
+
+    # Use average sales rate as baseline
+    baseline_rate = sum(d['sales']['sales_rate'] for d in calculation_details) / len(calculation_details)
+    base_full_cost = sum(d['full_cost']['full_cost_rate'] for d in calculation_details) / len(calculation_details)
+
+    # Define parameter variations (-20% to +20%)
+    variations = [-20, -10, 0, 10, 20]
+
+    # Calculate impacts
+    def calc_rate_with_profit(profit_delta):
+        new_profit = pricing_params.profit_margin_percent + profit_delta
+        profit_amount = base_full_cost * (new_profit / 100)
+        risk_amount = (base_full_cost + profit_amount) * (pricing_params.risk_surcharge_percent / 100)
+        before_discount = base_full_cost + profit_amount + risk_amount
+        discount_amount = before_discount * (pricing_params.discount_percent / 100)
+        return before_discount - discount_amount
+
+    def calc_rate_with_overhead(overhead_delta):
+        base_cost = sum(d['cost']['cost_rate'] for d in calculation_details) / len(calculation_details)
+        new_overhead_percent = overhead_percent + overhead_delta
+        new_overhead_amount = base_cost * (new_overhead_percent / 100)
+        new_full_cost = base_cost + new_overhead_amount
+        profit_amount = new_full_cost * (pricing_params.profit_margin_percent / 100)
+        risk_amount = (new_full_cost + profit_amount) * (pricing_params.risk_surcharge_percent / 100)
+        before_discount = new_full_cost + profit_amount + risk_amount
+        discount_amount = before_discount * (pricing_params.discount_percent / 100)
+        return before_discount - discount_amount
+
+    def calc_rate_with_discount(discount_delta):
+        new_discount = pricing_params.discount_percent + discount_delta
+        profit_amount = base_full_cost * (pricing_params.profit_margin_percent / 100)
+        risk_amount = (base_full_cost + profit_amount) * (pricing_params.risk_surcharge_percent / 100)
+        before_discount = base_full_cost + profit_amount + risk_amount
+        discount_amount = before_discount * (new_discount / 100)
+        return before_discount - discount_amount
+
+    profit_impacts = [calc_rate_with_profit(v) - baseline_rate for v in variations]
+    overhead_impacts = [calc_rate_with_overhead(v) - baseline_rate for v in variations]
+    discount_impacts = [calc_rate_with_discount(v) - baseline_rate for v in variations]
+
+    # Create chart
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+        x=variations,
+        y=profit_impacts,
+        mode='lines+markers',
+        name='Gewinnmarge',
+        line=dict(color='#2ecc71', width=3),
+        marker=dict(size=8)
+    ))
+
+    fig.add_trace(go.Scatter(
+        x=variations,
+        y=overhead_impacts,
+        mode='lines+markers',
+        name='Gemeinkosten',
+        line=dict(color='#e74c3c', width=3),
+        marker=dict(size=8)
+    ))
+
+    fig.add_trace(go.Scatter(
+        x=variations,
+        y=discount_impacts,
+        mode='lines+markers',
+        name='Rabatt',
+        line=dict(color='#f39c12', width=3),
+        marker=dict(size=8)
+    ))
+
+    # Add horizontal line at zero
+    fig.add_hline(y=0, line_dash="dash", line_color="gray", opacity=0.5)
+
+    fig.update_layout(
+        title=f"Sensitivitätsanalyse: Auswirkung auf Verkaufspreis (Basis: €{baseline_rate:.2f}/h)",
+        xaxis_title="Prozentuale Änderung des Parameters (%)",
+        yaxis_title="Änderung des Verkaufspreises (€/h)",
+        height=500,
+        showlegend=True,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        hovermode='x unified'
+    )
+
+    fig.add_annotation(
+        xref="paper",
+        yref="paper",
+        x=0.5,
+        y=-0.15,
+        showarrow=False,
+        text="Hinweis: Zeigt wie sich ±20% Änderungen der Parameter auf den finalen Verkaufspreis auswirken",
+        font=dict(size=10, color="gray"),
+        xanchor="center"
+    )
+
+    return fig
+
+
+# ============================================================================
+# DATABASE IMPORT COMPONENTS
+# ============================================================================
+
+def render_apportion_mapping(available_apportion: List[str]) -> Dict[str, List[str]]:
+    """
+    Render UI for mapping data_invoice_position_apportion values to overhead cost categories.
+
+    Args:
+        available_apportion: List of unique apportion values from database
+
+    Returns:
+        Dictionary mapping overhead categories to selected apportion values
+    """
+    st.markdown("#### 🔗 Zuordnung: Datenbank → Kostenkategorien")
+    st.markdown("Wählen Sie für jede Kostenkategorie, welche Datenbank-Zuordnungen (data_invoice_position_apportion) dazu gehören:")
+
+    overhead_categories = {
+        'office_costs': 'Bürokosten',
+        'it_infrastructure': 'IT-Infrastruktur',
+        'office_supplies': 'Büromaterial',
+        'insurance': 'Versicherungen',
+        'marketing': 'Marketing & Werbung',
+        'administration': 'Verwaltung',
+        'other': 'Sonstige Kosten'
+    }
+
+    mapping = {}
+
+    # Create a multiselect for each overhead category
+    for key, label in overhead_categories.items():
+        mapping[key] = st.multiselect(
+            label=label,
+            options=available_apportion,
+            default=st.session_state.get(f'apportion_mapping_{key}', []),
+            key=f'apportion_mapping_{key}',
+            help=f"Wählen Sie alle Datenbank-Zuordnungen, die zu '{label}' gehören"
+        )
+
+    # Show unmapped apportions as warning
+    all_mapped = set()
+    for apportions in mapping.values():
+        all_mapped.update(apportions)
+
+    unmapped = set(available_apportion) - all_mapped
+    if unmapped:
+        st.warning(f"⚠️ Nicht zugeordnete Werte: {', '.join(unmapped)}")
+        st.info("Diese Werte werden bei der Zuordnung ignoriert. Sie können sie der Kategorie 'Sonstige Kosten' zuordnen.")
+
+    return mapping
