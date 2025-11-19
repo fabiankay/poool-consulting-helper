@@ -9,10 +9,12 @@ from typing import Dict, List, Tuple, Optional
 from ..poool_api_client import PooolAPIClient
 
 
-def process_single_import(client: PooolAPIClient, index: int, row_data: Dict, field_mapping: Dict, import_type: str, country_cache: Optional[Dict[str, int]] = None) -> Dict:
+def process_single_import(client: PooolAPIClient, index: int, row_data: Dict, field_mapping: Dict, import_type: str, country_cache: Optional[Dict[str, int]] = None, tag_mappings: Optional[Dict] = None, tag_cache: Optional[Dict[str, int]] = None) -> Dict:
     """Process a single row import for companies or persons."""
     from .company_operations import prepare_company_data
     from .person_operations import prepare_person_data_with_company_lookup
+    from .update_operations import separate_update_fields_by_endpoint, prepare_supplier_update_data
+    from .tag_operations import process_entity_tags
 
     try:
         # Clean NaN values efficiently
@@ -20,8 +22,29 @@ def process_single_import(client: PooolAPIClient, index: int, row_data: Dict, fi
 
         # Prepare data based on import type
         if import_type == 'companies':
+            # Separate fields by endpoint (company vs client vs supplier)
+            company_fields, client_fields, supplier_fields = separate_update_fields_by_endpoint(clean_data, field_mapping)
+
+            # Prepare company data with company-level fields only
             # Pass both cleaned and original data (original needed for is_client/is_supplier empty handling)
-            prepared_data = prepare_company_data(clean_data, field_mapping, client, country_cache, original_row_data=row_data)
+            company_field_mapping = {k: v for k, v in field_mapping.items() if k not in client_fields and k not in supplier_fields}
+            prepared_data = prepare_company_data(clean_data, company_field_mapping, client, country_cache, original_row_data=row_data)
+
+            # Process tags if tag_mappings provided
+            if tag_mappings and tag_cache is not None:
+                tag_ids, created_tags, tag_error = process_entity_tags(
+                    client,
+                    pd.Series(row_data),  # Convert dict to Series for tag processing
+                    tag_mappings,
+                    tag_cache,
+                    auto_create=True
+                )
+                if tag_error:
+                    print(f"Warning: Tag processing failed for row {index}: {tag_error}")
+                elif tag_ids:
+                    prepared_data['tags'] = tag_ids
+                    if created_tags:
+                        print(f"Created new tags for row {index}: {', '.join(created_tags)}")
 
             # Early validation
             if not prepared_data.get('name'):
@@ -30,10 +53,103 @@ def process_single_import(client: PooolAPIClient, index: int, row_data: Dict, fi
                     'error': 'Missing required field: name'
                 }
 
+            # Create the company first
             created_item, error = client.create_company(prepared_data)
+
+            if error:
+                return {
+                    'success': False,
+                    'error': f'Company creation failed: {error}'
+                }
+
+            # Get created company ID
+            company_id = created_item.get('id')
+            if not company_id:
+                return {
+                    'success': False,
+                    'error': 'Company created but no ID returned'
+                }
+
+            # Track activation results
+            activation_results = []
+            activation_errors = []
+
+            # Activate as client if needed
+            if prepared_data.get('is_client') and client_fields:
+                print(f"DEBUG: Activating client for company {company_id} with fields: {list(client_fields.keys())}")
+                _, client_error = client.update_client(company_id, client_fields)
+                if client_error:
+                    activation_errors.append(f"Client activation failed: {client_error}")
+                else:
+                    activation_results.append('client')
+                    print(f"DEBUG: Client activation successful for company {company_id}")
+            elif prepared_data.get('is_client'):
+                # No client-specific fields, but still need to activate
+                print(f"DEBUG: Activating client for company {company_id} (no specific fields)")
+                _, client_error = client.update_client(company_id, {})
+                if client_error:
+                    activation_errors.append(f"Client activation failed: {client_error}")
+                else:
+                    activation_results.append('client')
+                    print(f"DEBUG: Client activation successful for company {company_id}")
+
+            # Activate as supplier if needed
+            if prepared_data.get('is_supplier') and supplier_fields:
+                prepared_supplier_data = prepare_supplier_update_data(supplier_fields)
+                print(f"DEBUG: Activating supplier for company {company_id} with fields: {list(prepared_supplier_data.keys())}")
+                _, supplier_error = client.update_supplier(company_id, prepared_supplier_data)
+                if supplier_error:
+                    activation_errors.append(f"Supplier activation failed: {supplier_error}")
+                else:
+                    activation_results.append('supplier')
+                    print(f"DEBUG: Supplier activation successful for company {company_id}")
+            elif prepared_data.get('is_supplier'):
+                # No supplier-specific fields, but still need to activate
+                print(f"DEBUG: Activating supplier for company {company_id} (no specific fields)")
+                _, supplier_error = client.update_supplier(company_id, {})
+                if supplier_error:
+                    activation_errors.append(f"Supplier activation failed: {supplier_error}")
+                else:
+                    activation_results.append('supplier')
+                    print(f"DEBUG: Supplier activation successful for company {company_id}")
+
+            # Return result with activation info
+            result = {
+                'success': True,
+                'result': {
+                    'row': index,
+                    'data': clean_data,
+                    'created': created_item
+                }
+            }
+
+            if activation_results:
+                result['result']['activated'] = activation_results
+
+            if activation_errors:
+                result['result']['activation_warnings'] = activation_errors
+
+            return result
+
         else:
             # Use enhanced person preparation with company lookup
             prepared_data, lookup_warnings = prepare_person_data_with_company_lookup(client, clean_data, field_mapping)
+
+            # Process tags if tag_mappings provided
+            if tag_mappings and tag_cache is not None:
+                tag_ids, created_tags, tag_error = process_entity_tags(
+                    client,
+                    pd.Series(row_data),
+                    tag_mappings,
+                    tag_cache,
+                    auto_create=True
+                )
+                if tag_error:
+                    print(f"Warning: Tag processing failed for row {index}: {tag_error}")
+                elif tag_ids:
+                    prepared_data['tags'] = tag_ids
+                    if created_tags:
+                        print(f"Created new tags for row {index}: {', '.join(created_tags)}")
 
             # Early validation
             if not prepared_data.get('firstname') or not prepared_data.get('lastname'):
@@ -44,20 +160,20 @@ def process_single_import(client: PooolAPIClient, index: int, row_data: Dict, fi
 
             created_item, error = client.create_person(prepared_data)
 
-        if error:
-            return {
-                'success': False,
-                'error': error
-            }
-        else:
-            return {
-                'success': True,
-                'result': {
-                    'row': index,
-                    'data': clean_data,
-                    'created': created_item
+            if error:
+                return {
+                    'success': False,
+                    'error': error
                 }
-            }
+            else:
+                return {
+                    'success': True,
+                    'result': {
+                        'row': index,
+                        'data': clean_data,
+                        'created': created_item
+                    }
+                }
 
     except Exception as e:
         return {
@@ -80,11 +196,22 @@ def bulk_import_generic(client: PooolAPIClient, df, field_mapping: Dict, import_
             print(f"Warning: Could not fetch countries: {error}. Country lookups will be disabled.")
             country_cache = {}
 
+    # Initialize tag cache for tag lookups
+    tag_cache = {}
+    if tag_mappings:
+        # Fetch all tags once at the start of import
+        tag_cache, error = client.get_all_tags()
+        if error:
+            print(f"Warning: Could not fetch tags: {error}. Tag processing will be disabled.")
+            tag_cache = {}
+        else:
+            print(f"Loaded {len(tag_cache)} tags for import processing")
+
     # Pre-convert DataFrame to dict for better performance
     records = df.to_dict('records')
 
     for index, row_data in enumerate(records, 1):
-        result = process_single_import(client, index, row_data, field_mapping, import_type, country_cache)
+        result = process_single_import(client, index, row_data, field_mapping, import_type, country_cache, tag_mappings, tag_cache)
 
         if result['success']:
             successful.append(result['result'])

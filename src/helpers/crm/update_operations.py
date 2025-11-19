@@ -7,7 +7,7 @@ Handles bulk updates, matching, preview functions for companies and persons.
 import pandas as pd
 from typing import Dict, List, Tuple, Optional
 from ..poool_api_client import PooolAPIClient
-from .field_definitions import get_client_fields, get_supplier_fields, get_field_api_name_mapping
+from .field_definitions import get_client_fields, get_supplier_fields, get_api_field_name
 
 
 def separate_update_fields_by_endpoint(row_data: Dict, field_mapping: Dict) -> Tuple[Dict, Dict, Dict]:
@@ -17,7 +17,6 @@ def separate_update_fields_by_endpoint(row_data: Dict, field_mapping: Dict) -> T
     """
     client_field_names = set(get_client_fields())
     supplier_field_names = set(get_supplier_fields())
-    field_name_mapping = get_field_api_name_mapping()
 
     company_data = {}
     client_data = {}
@@ -31,8 +30,8 @@ def separate_update_fields_by_endpoint(row_data: Dict, field_mapping: Dict) -> T
         if value is None or (isinstance(value, str) and not value.strip()):
             continue
 
-        # Map internal field name to actual API field name if needed
-        actual_api_field = field_name_mapping.get(api_field, api_field)
+        # Convert internal field name to actual API field name using convention
+        actual_api_field = get_api_field_name(api_field)
 
         # Route to appropriate endpoint
         if api_field in client_field_names:

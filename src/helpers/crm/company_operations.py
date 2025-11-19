@@ -135,11 +135,10 @@ def prepare_company_data(row_data: Dict, field_mapping: Dict, client: Optional[P
         country_cache: Optional country cache for address processing
         original_row_data: Original uncleaned row data (needed for is_client/is_supplier empty value handling)
     """
-    from .field_definitions import get_field_api_name_mapping
+    from .field_definitions import get_api_field_name
 
     company_data = {}
     complex_fields = {}
-    field_name_mapping = get_field_api_name_mapping()
 
     # Use original_row_data for checking empty values, fallback to row_data if not provided
     check_data = original_row_data if original_row_data is not None else row_data
@@ -179,8 +178,8 @@ def prepare_company_data(row_data: Dict, field_mapping: Dict, client: Optional[P
 
         str_value = str(value).strip()
 
-        # Map internal field name to actual API field name if needed
-        actual_api_field = field_name_mapping.get(api_field, api_field)
+        # Convert internal field name to actual API field name using convention
+        actual_api_field = get_api_field_name(api_field)
 
         # Special handling for name_token - remove ALL spaces and append "abc" for testing
         if actual_api_field == 'name_token' and str_value:

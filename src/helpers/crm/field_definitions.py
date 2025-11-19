@@ -31,11 +31,17 @@ def get_optional_company_fields() -> List[str]:
         "is_client", "is_supplier",
 
         # Client-specific fields
+        # Note: customer_number_client (API: customer_number) = Our number assigned to this client
+        #       client_number (API: number) = Their reference/client number
         "customer_number_client", "payment_time_day_num_client", "comment_client",
-        "send_bill_to_email_to", "reference_number_required", "dunning_blocked",
+        "send_bill_to_email_to", "send_bill_to_email_cc", "send_bill_to_email_bcc",
+        "reference_number_required", "dunning_blocked", "dunning_document_blocked",
+        "send_by_email", "send_by_mail", "number_unique",
         "client_number", "datev_account_client",
 
         # Supplier-specific fields
+        # Note: supplier_number (API: number) = Our number assigned to this supplier
+        #       customer_number_supplier (API: customer_number) = Their number for us as customer
         "supplier_number", "comment_supplier", "comment_internal", "discount_day_num", "discount_percentage",
         "customer_number_supplier", "payment_time_day_num_supplier", "datev_account_supplier",
 
@@ -85,26 +91,34 @@ def get_supplier_fields() -> List[str]:
     ]
 
 
-def get_field_api_name_mapping() -> Dict[str, str]:
+def get_api_field_name(field_name: str) -> str:
     """
-    Return mapping of internal field names to actual API field names.
+    Convert internal field name to API field name using naming convention.
 
-    This allows us to have separate fields for client vs supplier endpoints
-    that map to the same API field name but go to different endpoints.
+    Convention:
+    - 'client_number' or 'supplier_number' → 'number'
+    - Fields ending with '_client' (except 'is_client') → strip suffix
+    - Fields ending with '_supplier' (except 'is_supplier') → strip suffix
+    - All other fields → return as-is
+
+    This allows separate UI fields for client/supplier that map to the same API field
+    but get routed to different endpoints.
     """
-    return {
-        # Client-specific mappings
-        'customer_number_client': 'customer_number',
-        'payment_time_day_num_client': 'payment_time_day_num',
-        'datev_account_client': 'datev_account',
-        'client_number': 'number',
+    # Handle special cases first
+    if field_name in ('client_number', 'supplier_number'):
+        return 'number'
 
-        # Supplier-specific mappings
-        'supplier_number': 'number',
-        'customer_number_supplier': 'customer_number',
-        'payment_time_day_num_supplier': 'payment_time_day_num',
-        'datev_account_supplier': 'datev_account',
-    }
+    # Don't strip suffix from is_client/is_supplier (they are real API field names)
+    if field_name in ('is_client', 'is_supplier'):
+        return field_name
+
+    # Strip suffixes from client/supplier-specific fields
+    if field_name.endswith('_client'):
+        return field_name[:-7]  # Remove '_client' suffix
+    elif field_name.endswith('_supplier'):
+        return field_name[:-9]  # Remove '_supplier' suffix
+    else:
+        return field_name
 
 
 def get_company_field_labels() -> Dict[str, str]:
@@ -142,24 +156,24 @@ def get_company_field_labels() -> Dict[str, str]:
         "is_supplier": "Ist Lieferant",
 
         # Client-specific fields
-        "customer_number_client": "Kundennummer (Kunde)",
+        "customer_number_client": "Unsere Kundennummer",
+        "client_number": "Externe Kundennummer",
         "payment_time_day_num_client": "Zahlungsziel Tage (Kunde)",
         "comment_client": "Kommentar (Kunde)",
         "send_bill_to_email_to": "Rechnung per E-Mail an",
+        "send_bill_to_email_cc": "Rechnung E-Mail CC",
+        "send_bill_to_email_bcc": "Rechnung E-Mail BCC",
         "reference_number_required": "Referenznummer erforderlich",
         "dunning_blocked": "Mahnung gesperrt",
         "dunning_document_blocked": "Mahndokument gesperrt",
-        "send_bill_to_email_cc": "Rechnung CC",
-        "send_bill_to_email_bcc": "Rechnung BCC",
         "send_by_email": "Versand per E-Mail",
         "send_by_mail": "Versand per Post",
         "number_unique": "Eindeutige Nummer",
-        "client_number": "Kundennummer",
         "datev_account_client": "DATEV-Konto (Kunde)",
 
         # Supplier-specific fields
-        "supplier_number": "Lieferantennummer",
-        "customer_number_supplier": "Kundennummer (Lieferant)",
+        "supplier_number": "Unsere Lieferantennummer",
+        "customer_number_supplier": "Externe Kundennummer (von Lieferant)",
         "payment_time_day_num_supplier": "Zahlungsziel Tage (Lieferant)",
         "comment_supplier": "Kommentar (Lieferant)",
         "comment_internal": "Interner Kommentar",
@@ -241,7 +255,9 @@ def get_company_field_tabs() -> Dict[str, List[str]]:
         "Kunde": [
             "customer_number_client", "client_number", "datev_account_client", "leitweg_id",
             "payment_time_day_num_client", "comment_client",
-            "send_bill_to_email_to", "reference_number_required", "dunning_blocked"
+            "send_bill_to_email_to", "send_bill_to_email_cc", "send_bill_to_email_bcc",
+            "reference_number_required", "dunning_blocked", "dunning_document_blocked",
+            "send_by_email", "send_by_mail", "number_unique"
         ],
         "Lieferant": [
             "supplier_number", "customer_number_supplier", "datev_account_supplier",
