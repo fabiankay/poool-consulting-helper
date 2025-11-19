@@ -69,13 +69,16 @@ class CredentialManager:
 
     def __init__(self):
         """Initialize credential manager (only once per session)."""
+        # Always ensure session state is initialized
+        self._init_session_state()
+
         if not CredentialManager._initialized:
             self._apis: Dict[str, APIConfig] = {}
-            self._init_session_state()
             CredentialManager._initialized = True
 
     def _init_session_state(self):
         """Initialize session state for credential storage."""
+        # Always check and initialize session state, regardless of class initialization status
         if '_credential_store' not in st.session_state:
             st.session_state._credential_store = {}
 
