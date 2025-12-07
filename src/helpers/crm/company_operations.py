@@ -180,7 +180,7 @@ def prepare_company_data(row_data: Dict, field_mapping: Dict, client: Optional[P
 
         # Special handling for name_token - remove ALL spaces and append "abc" for testing
         if actual_api_field == 'name_token' and str_value:
-            str_value = str_value.replace(' ', '') + 'axb'
+            str_value = str_value.replace(' ', '')
 
         # Handle different field types (is_client/is_supplier already handled above)
         if actual_api_field in ["reference_number_required", "dunning_blocked", "datev_is_client_collection"]:
