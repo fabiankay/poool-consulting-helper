@@ -78,18 +78,21 @@ class PooolAPIClient:
         if response.status_code in [200, 201]:
             data = response.json()
             return data.get('data', {}), None
-        elif response.status_code == 400:
+        elif response.status_code in [400, 422]:
             try:
                 error_data = response.json()
                 if 'errors' in error_data:
                     errors = error_data['errors']
                     error_msgs = []
                     for field, msgs in errors.items():
-                        error_msgs.append(f"{field}: {', '.join(msgs)}")
+                        if isinstance(msgs, list):
+                            error_msgs.append(f"{field}: {', '.join(msgs)}")
+                        else:
+                            error_msgs.append(f"{field}: {msgs}")
                     return None, f"Validierungsfehler: {'; '.join(error_msgs)}"
                 return None, f"Ungültige Anfrage: {error_data.get('message', 'Ungültige Daten')}"
             except:
-                return None, "Ungültige Anfrage: Ungültiges Datenformat"
+                return None, f"Ungültige Anfrage ({response.status_code}): Ungültiges Datenformat"
         elif response.status_code == 401:
             return None, "Authentifizierung fehlgeschlagen: Ungültiger oder abgelaufener API-Schlüssel"
         elif response.status_code == 403:
@@ -97,7 +100,20 @@ class PooolAPIClient:
         elif response.status_code == 429:
             return None, "Ratenlimit überschritten: Bitte warten Sie, bevor Sie es erneut versuchen"
         elif response.status_code == 500:
-            return None, "Serverfehler: Bitte versuchen Sie es später erneut"
+            try:
+                error_data = response.json()
+                if 'errors' in error_data:
+                    errors = error_data['errors']
+                    error_msgs = []
+                    for field, msgs in errors.items():
+                        if isinstance(msgs, list):
+                            error_msgs.append(f"{field}: {', '.join(msgs)}")
+                        else:
+                            error_msgs.append(f"{field}: {msgs}")
+                    return None, f"Serverfehler (500): {'; '.join(error_msgs)}"
+                return None, f"Serverfehler (500): {error_data.get('message', response.text[:200])}"
+            except:
+                return None, f"Serverfehler (500): {response.text[:200] if response.text else 'Keine Details'}"
         else:
             try:
                 error_data = response.json()
@@ -460,6 +476,102 @@ class PooolAPIClient:
 
         except Exception as e:
             return None, f"Fehler beim Aktualisieren des Lieferanten: {str(e)}"
+
+    def get_default_number_range_id(self, for_type: str = "client") -> Tuple[Optional[int], Optional[str]]:
+        """
+        Fetch default number_range_id for client or supplier.
+        Filters by number_range_group to get the correct type.
+        """
+        try:
+            # First, fetch number_range_groups to find the right group
+            groups_response = requests.get(f"{self._base_url}/number_range_groups",
+                                          headers=self._headers,
+                                          timeout=30)
+
+            if groups_response.status_code != 200:
+                return None, f"Failed to fetch number range groups: HTTP {groups_response.status_code}"
+
+            groups = groups_response.json().get('data', [])
+
+            # Find the group matching our type (client or supplier)
+            target_group_id = None
+            for group in groups:
+                title = (group.get('title') or group.get('slug') or '').lower()
+                if for_type.lower() in title:
+                    target_group_id = group.get('id')
+                    break
+
+            if not target_group_id:
+                return None, f"No number range group found for type: {for_type}"
+
+            # Now fetch number_ranges and filter by group
+            response = requests.get(f"{self._base_url}/number_ranges",
+                                   headers=self._headers,
+                                   timeout=30)
+
+            if response.status_code != 200:
+                return None, f"Failed to fetch number ranges: HTTP {response.status_code}"
+
+            ranges = response.json().get('data', [])
+
+            # Filter for the correct group and find default
+            for nr in ranges:
+                if nr.get('number_range_group_id') == target_group_id:
+                    if nr.get('is_default') in [True, "1", 1]:
+                        return nr.get('id'), None
+
+            # If no default found in group, return any from that group
+            for nr in ranges:
+                if nr.get('number_range_group_id') == target_group_id:
+                    return nr.get('id'), None
+
+            return None, f"No number range found for type: {for_type}"
+        except Exception as e:
+            return None, f"Error fetching number range: {str(e)}"
+
+    def create_client(self, company_id: int, client_data: Dict, number_range_id: int = None) -> Tuple[Optional[Dict], Optional[str]]:
+        """Create client record for a company via POST /clients."""
+        try:
+            # Validate required field
+            if not client_data.get("number"):
+                return None, "Kundennummer (client_number) ist erforderlich für Kundenaktivierung"
+
+            client_data["company_id"] = company_id
+            client_data["tenant_id"] = client_data.get("tenant_id", 1)
+
+            if number_range_id:
+                client_data["number_range_id"] = number_range_id
+
+            # API requires number_unique - auto-generate from number if not provided
+            if not client_data.get("number_unique"):
+                client_data["number_unique"] = client_data["number"]
+
+            payload = {"data": client_data}
+            response = requests.post(f"{self._base_url}/clients",
+                                   headers=self._headers,
+                                   json=payload,
+                                   timeout=30)
+            return self._handle_api_response(response, "client")
+        except Exception as e:
+            return None, f"Fehler beim Erstellen des Kunden: {str(e)}"
+
+    def create_supplier(self, company_id: int, supplier_data: Dict, number_range_id: int = None) -> Tuple[Optional[Dict], Optional[str]]:
+        """Create supplier record for a company via POST /suppliers."""
+        try:
+            supplier_data["company_id"] = company_id
+            supplier_data["tenant_id"] = supplier_data.get("tenant_id", 1)
+
+            if number_range_id:
+                supplier_data["number_range_id"] = number_range_id
+
+            payload = {"data": supplier_data}
+            response = requests.post(f"{self._base_url}/suppliers",
+                                   headers=self._headers,
+                                   json=payload,
+                                   timeout=30)
+            return self._handle_api_response(response, "supplier")
+        except Exception as e:
+            return None, f"Fehler beim Erstellen des Lieferanten: {str(e)}"
 
     def update_person(self, person_id: int, person_data: Dict) -> Tuple[Optional[Dict], Optional[str]]:
         """Update a person via API."""

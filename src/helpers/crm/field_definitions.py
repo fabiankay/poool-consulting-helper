@@ -31,19 +31,16 @@ def get_optional_company_fields() -> List[str]:
         "is_client", "is_supplier",
 
         # Client-specific fields
-        # Note: customer_number_client (API: customer_number) = Our number assigned to this client
-        #       client_number (API: number) = Their reference/client number
-        "customer_number_client", "payment_time_day_num_client", "comment_client",
+        # client_number (API: number) = The client number
+        "client_number", "payment_time_day_num_client", "comment_client",
         "send_bill_to_email_to", "send_bill_to_email_cc", "send_bill_to_email_bcc",
         "reference_number_required", "dunning_blocked", "dunning_document_blocked",
-        "send_by_email", "send_by_mail", "number_unique",
-        "client_number", "datev_account_client",
+        "send_by_email", "send_by_mail", "datev_account_client",
 
         # Supplier-specific fields
-        # Note: supplier_number (API: number) = Our number assigned to this supplier
-        #       customer_number_supplier (API: customer_number) = Their number for us as customer
+        # supplier_number (API: number) = The supplier number
         "supplier_number", "comment_supplier", "comment_internal", "discount_day_num", "discount_percentage",
-        "customer_number_supplier", "payment_time_day_num_supplier", "datev_account_supplier",
+        "payment_time_day_num_supplier", "datev_account_supplier",
 
         # German/EU specific fields
         "leitweg_id", "datev_is_client_collection",
@@ -75,19 +72,34 @@ def get_optional_person_fields() -> List[str]:
 def get_client_fields() -> List[str]:
     """Return list of fields that belong to the client endpoint."""
     return [
-        'customer_number_client', 'payment_time_day_num_client', 'dunning_blocked', 'dunning_document_blocked',
-        'reference_number_required', 'datev_account_client', 'leitweg_id', 'datev_is_client_collection',
-        'send_bill_to_email_to', 'send_bill_to_email_cc', 'send_bill_to_email_bcc',
-        'send_by_email', 'send_by_mail', 'client_number', 'number_unique'
+        'client_number',  # → 'number' (required)
+        'payment_time_day_num_client',  # → 'payment_time_day_num'
+        'dunning_blocked',
+        'dunning_document_blocked',
+        'reference_number_required',
+        'datev_account_client',  # → 'datev_account'
+        'leitweg_id',
+        'datev_is_client_collection',
+        'send_bill_to_email_to',
+        'send_bill_to_email_cc',
+        'send_bill_to_email_bcc',
+        'send_by_email',
+        'send_by_mail',
+        'comment_client',
+        'comment_internal',
     ]
 
 
 def get_supplier_fields() -> List[str]:
     """Return list of fields that belong to the supplier endpoint."""
     return [
-        'supplier_number', 'customer_number_supplier', 'payment_time_day_num_supplier',
-        'discount_day_num', 'discount_percentage',
-        'comment_supplier', 'comment_internal', 'datev_account_supplier'
+        'supplier_number',  # → 'number'
+        'payment_time_day_num_supplier',  # → 'payment_time_day_num'
+        'discount_day_num',
+        'discount_percentage',
+        'comment_supplier',
+        'comment_internal',
+        'datev_account_supplier',  # → 'datev_account'
     ]
 
 
@@ -156,8 +168,7 @@ def get_company_field_labels() -> Dict[str, str]:
         "is_supplier": "Ist Lieferant",
 
         # Client-specific fields
-        "customer_number_client": "Unsere Kundennummer",
-        "client_number": "Externe Kundennummer",
+        "client_number": "Kundennummer",
         "payment_time_day_num_client": "Zahlungsziel Tage (Kunde)",
         "comment_client": "Kommentar (Kunde)",
         "send_bill_to_email_to": "Rechnung per E-Mail an",
@@ -168,12 +179,10 @@ def get_company_field_labels() -> Dict[str, str]:
         "dunning_document_blocked": "Mahndokument gesperrt",
         "send_by_email": "Versand per E-Mail",
         "send_by_mail": "Versand per Post",
-        "number_unique": "Eindeutige Nummer",
         "datev_account_client": "DATEV-Konto (Kunde)",
 
         # Supplier-specific fields
-        "supplier_number": "Unsere Lieferantennummer",
-        "customer_number_supplier": "Externe Kundennummer (von Lieferant)",
+        "supplier_number": "Lieferantennummer",
         "payment_time_day_num_supplier": "Zahlungsziel Tage (Lieferant)",
         "comment_supplier": "Kommentar (Lieferant)",
         "comment_internal": "Interner Kommentar",
@@ -253,14 +262,14 @@ def get_company_field_tabs() -> Dict[str, List[str]]:
             "contact_phone", "contact_email", "contact_website"
         ],
         "Kunde": [
-            "customer_number_client", "client_number", "datev_account_client", "leitweg_id",
+            "client_number", "datev_account_client", "leitweg_id",
             "payment_time_day_num_client", "comment_client",
             "send_bill_to_email_to", "send_bill_to_email_cc", "send_bill_to_email_bcc",
             "reference_number_required", "dunning_blocked", "dunning_document_blocked",
-            "send_by_email", "send_by_mail", "number_unique"
+            "send_by_email", "send_by_mail"
         ],
         "Lieferant": [
-            "supplier_number", "customer_number_supplier", "datev_account_supplier",
+            "supplier_number", "datev_account_supplier",
             "payment_time_day_num_supplier", "comment_supplier", "comment_internal",
             "discount_day_num", "discount_percentage"
         ],

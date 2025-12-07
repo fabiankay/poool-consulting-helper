@@ -153,15 +153,12 @@ def prepare_company_data(row_data: Dict, field_mapping: Dict, client: Optional[P
                 # Check if value is NaN/None or empty string
                 if pd.isna(value) or (isinstance(value, str) and not value.strip()):
                     company_data[boolean_field] = False
-                    print(f"DEBUG: {boolean_field} set to False (empty cell in column '{csv_column}')")
                 else:
                     # Any non-empty value = True
                     company_data[boolean_field] = True
-                    print(f"DEBUG: {boolean_field} set to True (value: {value})")
             elif csv_column:
                 # Column mapped but doesn't exist in data
                 company_data[boolean_field] = False
-                print(f"DEBUG: {boolean_field} set to False (column '{csv_column}' not found)")
 
     # Process all fields in a single loop
     for api_field, csv_column in field_mapping.items():
@@ -183,13 +180,7 @@ def prepare_company_data(row_data: Dict, field_mapping: Dict, client: Optional[P
 
         # Special handling for name_token - remove ALL spaces and append "abc" for testing
         if actual_api_field == 'name_token' and str_value:
-            original_value = str_value
-            str_value = str_value.replace(' ', '') + 'abc'
-            print(f"DEBUG: name_token processed - original: '{value}', trimmed: '{original_value.replace(' ', '')}', final: '{str_value}'")
-
-        # Debug logging for UID field
-        if actual_api_field == 'uid' and str_value:
-            print(f"DEBUG: Processing UID field - csv_column: {csv_column}, value: {value}, str_value: {str_value}")
+            str_value = str_value.replace(' ', '') + 'axb'
 
         # Handle different field types (is_client/is_supplier already handled above)
         if actual_api_field in ["reference_number_required", "dunning_blocked", "datev_is_client_collection"]:
@@ -212,19 +203,10 @@ def prepare_company_data(row_data: Dict, field_mapping: Dict, client: Optional[P
                 complex_fields[actual_api_field] = str_value
         elif str_value:
             company_data[actual_api_field] = str_value
-            # Debug logging for UID field storage
-            if actual_api_field == 'uid':
-                print(f"DEBUG: UID stored in company_data: {company_data[actual_api_field]}")
 
     # Process complex fields if any exist
     if complex_fields:
         _add_complex_fields_to_company(company_data, complex_fields, client, country_cache)
-
-    # Final debug check for UID
-    if 'uid' in company_data:
-        print(f"DEBUG: Final company_data contains UID: {company_data.get('uid')}")
-    elif 'uid' in field_mapping:
-        print(f"DEBUG: UID was mapped but NOT in final company_data. field_mapping['uid'] = {field_mapping.get('uid')}")
 
     return company_data
 
